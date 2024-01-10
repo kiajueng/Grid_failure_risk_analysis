@@ -84,18 +84,18 @@ class hist_plot():
 
             # Convert start and end date of config to date object
             start = datetime.datetime.strptime(
-                config[start_date], "%Y_%m_%d").date()
+                config["start_date"], "%Y_%m_%d").date()
             end = datetime.datetime.strptime(
-                config[end_date], "%Y_%m_%d").date()
+                config["end_date"], "%Y_%m_%d").date()
 
             # Add condition that modificationtime is larger than start and
             # smaller than end time, since the files are ordered after their
             # modification time
             if config["condition"] == "":
-                config["condition"] += f'data["modificationtime"] > datetime.datetime.strptime({config[start_date]},"%Y_%m_%d").date() & data["modificationtime"] < datetime.datetime.strptime({config[end_date]},"%Y_%m_%d").date()'
+                config["condition"] += f'(data["modificationtime"] > pd.to_datetime(datetime.datetime.strptime("{config["start_date"]}","%Y_%m_%d").date())) & (data["modificationtime"] < pd.to_datetime(datetime.datetime.strptime("{config["end_date"]}","%Y_%m_%d").date()))'
 
             else:
-                config["condition"] += f'& data["modificationtime"] > datetime.datetime.strptime({config[start_date]},"%Y_%m_%d").date() & data["modificationtime"] < datetime.datetime.strptime({config[end_date]},"%Y_%m_%d").date()'
+                config["condition"] += f' & (data["modificationtime"] > pd.to_datetime(datetime.datetime.strptime("{config["start_date"]}","%Y_%m_%d").date())) & (data["modificationtime"] < pd.to_datetime(datetime.datetime.strptime("{config["end_date"]}","%Y_%m_%d").date()))'
 
             date_range_config = (start, end)
 
@@ -116,13 +116,15 @@ class hist_plot():
                     # ranges of the cfg groups, then put all of them in one
                     # list
                     to_be_combined_dates.append(date_range)
-                    to_be_combined_configs += cfg_groups.pop(date_range)
-
-            if to_be_combined_dates:
-                to_be_combined_dates.append(date_range_config)
-                to_be_combined_configs.append(config)
-
-            new_key = self.list_to_date_range(to_be_combined)
+            
+            for date_range in to_be_combined_dates:
+                to_be_combined_configs += cfg_groups.pop(date_range)
+                
+            
+            to_be_combined_dates.append(date_range_config)
+            to_be_combined_configs.append(config)
+                
+            new_key = self.list_to_date_range(to_be_combined_dates)
             cfg_groups[new_key] = to_be_combined_configs
 
         return cfg_groups
@@ -157,10 +159,8 @@ class hist_plot():
         while start <= end:
             # Load file into pandas dataframe and append to data
             date = str(start).replace("-", "_")
-            data.append(
-                pd.read_csv(
-                    f"/share/scratch1/es-atlas/atlas_jobs_enr_skimmed/atlas_jobs_enr-{date}.csv",
-                    usecols=variables))
+            data.append(pd.read_csv(f"/share/scratch1/es-atlas/atlas_jobs_enr_skimmed/atlas_jobs_enr-{date}.csv",usecols=variables))
+            start += datetime.timedelta(days=1)
 
         if len(data) == 0:
             raise FileNotFoundError(
@@ -180,15 +180,16 @@ class hist_plot():
 
         # Cast column to datetime if it is a datetime column
         if cfg["datetime"]:
-            data[cfg["x"]] = pd.to_datetime(data[cfg["x"]])
+            #data[cfg["x"]] = pd.to_datetime(data[cfg["x"]])
+            data["modificationtime"] = pd.to_datetime(data["modificationtime"])
+            data["starttime"] = pd.to_datetime(data["starttime"])
+            data["endtime"] = pd.to_datetime(data["endtime"])
 
         # Filter data with condition
-        f_data = data.loc[eval(cfg["condition"])]
-
+        f_data = data.loc[eval(cfg["condition"])].reset_index(drop=True)
         # Now use the filtered data to create the histogram
         f, ax = plt.subplots(figsize=cfg["fig_size"])
         sns.despine(f)  # Remove top and right spine of histogram
-
         if cfg["normalize"]:
             sns.histplot(data=f_data,
                          x=cfg["x"],
@@ -237,7 +238,7 @@ class hist_plot():
             # date_range
             variables = self.cfgs_to_variables(cfgs=cfgs_dict[date_range])
             data = self.load_data(date_range=date_range, variables=variables)
-
-        # Create plots for each config
-        for cfg in cfgs_dict[date_range]:
-            self.plot(cfg, data)
+            
+            # Create plots for each config
+            for cfg in cfgs_dict[date_range]:
+                self.plot(cfg, data)
