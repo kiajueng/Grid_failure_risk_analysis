@@ -1,4 +1,4 @@
-import pandas as pd 
+import pandas as pd
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -11,7 +11,7 @@ example_conifg = {start_date: Start date to read the data from (Last modificatio
                   variables: Specifies which columns to keep (For condition and for plotting) --> Saves memory (List of strings)
                   title: Title of the histogram (String),
                   hist_name: Name of output pdf (string),
-                  fig_size: Size of the output figure in (width,height) format (tuple of floats), 
+                  fig_size: Size of the output figure in (width,height) format (tuple of floats),
                   bins: Number of bins (int) or location of bin edges (list) or "auto" -> bins set automatically by seaborn (string),
                   ylabel: Label of y axis (string),
                   xlabel: Label of x axis (string),
@@ -23,21 +23,22 @@ example_conifg = {start_date: Start date to read the data from (Last modificatio
                   datetime: Boolean to say if the x variable has datettime as dtype or not (Bool,
                   condition: String of conditions, transformed later to expression (USE data[variable] instead of variable) (string),
                   y_log_scale: Boolean, to decide whether we want to scale the y-axis logarithmic or not (bool)
-                  }          
-"""                  
-        
+                  }
+"""
+
+
 class hist_plot():
-    
-    def __init__(self,cfgs):
+
+    def __init__(self, cfgs):
         """
-        Initialize hist_plot, which creates histograms based on a dictionary config 
-        
+        Initialize hist_plot, which creates histograms based on a dictionary config
+
         :param cfgs: The config file from which to read
         :return:
         """
         self.cfgs = cfgs
-        
-    def check_overlap(self,date_range_1,date_range_2):
+
+    def check_overlap(self, date_range_1, date_range_2):
         """
         Checks if two date ranges have overlap
 
@@ -46,8 +47,8 @@ class hist_plot():
         :return check: Returns Boolean, indicating if there is an overlap
         """
 
-        latest_start = max(date_range_1[0],date_range_2[0])
-        earliest_end = min(date_range_1[1],date_range_2[1])
+        latest_start = max(date_range_1[0], date_range_2[0])
+        earliest_end = min(date_range_1[1], date_range_2[1])
         delta = (earliest_end - latest_start).days + 1
         overlap = max(0, delta)
 
@@ -56,7 +57,7 @@ class hist_plot():
         else:
             return False
 
-    def list_to_date_range(self,list_date_range):
+    def list_to_date_range(self, list_date_range):
         """
         Find minimal starting and maximal ending date from a list of date ranges
 
@@ -66,9 +67,9 @@ class hist_plot():
 
         start_date = min([dates[0] for dates in list_date_range])
         end_date = max([dates[1] for dates in list_date_range])
-        return (start_date,end_date)
+        return (start_date, end_date)
 
-    def group_cfg(self,configs): 
+    def group_cfg(self, configs):
         """
         Create config groups, whose dates do not overlap to not load data twice
 
@@ -76,37 +77,44 @@ class hist_plot():
         :return: Dictionary, with tuple as key (start_date,end_date) and list as value [configs belonging to one group]
         """
 
-        #Initialize dictionary to put the grouped configs in
+        # Initialize dictionary to put the grouped configs in
         cfg_groups = {}
 
+        for i, config in enumerate(configs):
 
-        for i,config in enumerate(configs): 
+            # Convert start and end date of config to date object
+            start = datetime.datetime.strptime(
+                config[start_date], "%Y_%m_%d").date()
+            end = datetime.datetime.strptime(
+                config[end_date], "%Y_%m_%d").date()
 
-            #Convert start and end date of config to date object
-            start = datetime.datetime.strptime(config[start_date],"%Y_%m_%d").date()
-            end = datetime.datetime.strptime(config[end_date],"%Y_%m_%d").date()
-            
-            #Add condition that modificationtime is larger than start and smaller than end time, since the files are ordered after their modification time
+            # Add condition that modificationtime is larger than start and
+            # smaller than end time, since the files are ordered after their
+            # modification time
             if config["condition"] == "":
                 config["condition"] += f'data["modificationtime"] > datetime.datetime.strptime({config[start_date]},"%Y_%m_%d").date() & data["modificationtime"] < datetime.datetime.strptime({config[end_date]},"%Y_%m_%d").date()'
-                
+
             else:
                 config["condition"] += f'& data["modificationtime"] > datetime.datetime.strptime({config[start_date]},"%Y_%m_%d").date() & data["modificationtime"] < datetime.datetime.strptime({config[end_date]},"%Y_%m_%d").date()'
-            
-            date_range_config = (start,end)
 
-            #If i=0, then add this as first daterange interval to cfg_groups
+            date_range_config = (start, end)
+
+            # If i=0, then add this as first daterange interval to cfg_groups
             if i == 0:
                 cfg_groups[date_range_config] = [config]
                 continue
 
-            #Create list to input all keys (date_ranges), that has to be converted into one, due to overlap
+            # Create list to input all keys (date_ranges), that has to be
+            # converted into one, due to overlap
             to_be_combined_dates = []
-            to_be_combined_configs = [] 
-            #Check if date_ranges in cfg groups overlaps with the config one
+            to_be_combined_configs = []
+            
+            # Check if date_ranges in cfg groups overlaps with the config one
             for date_range in cfg_groups:
                 if self.check_overlap(date_range_config, date_range):
-                    #If date range of config overlaps with multiple date ranges of the cfg groups, then put all of them in one list
+                    # If date range of config overlaps with multiple date
+                    # ranges of the cfg groups, then put all of them in one
+                    # list
                     to_be_combined_dates.append(date_range)
                     to_be_combined_configs += cfg_groups.pop(date_range)
 
@@ -119,7 +127,7 @@ class hist_plot():
 
         return cfg_groups
 
-    def cfgs_to_variables(self,cfgs):
+    def cfgs_to_variables(self, cfgs):
         """
         Takes list of configs as input and return all variables needed for the list of configs
 
@@ -129,15 +137,15 @@ class hist_plot():
 
         variables = []
 
-        for cfg in cfgs: 
+        for cfg in cfgs:
             variables += cfg["variables"]
 
         return list(set(variables))
-        
-    def load_data(self,date_range,variables):
+
+    def load_data(self, date_range, variables):
         """
         Load the data from the files specified in config and concatenate into one pandas dataframe
-        
+
         :param date_range: Date range from which days to load the data from
         :param variables: List with variables, defining which columns will be loaded
         :return pd.concat(data): Returns all the csv files concatenated into one pandas dataframe.
@@ -145,87 +153,91 @@ class hist_plot():
         data = []
         start = date_range[0]
         end = date_range[1]
-        
+
         while start <= end:
-            #Load file into pandas dataframe and append to data
-            date = str(start).replace("-","_")
-            data.append(pd.read_csv(f"/share/scratch1/es-atlas/atlas_jobs_enr_skimmed/atlas_jobs_enr-{date}.csv",usecols=variables))
-        
+            # Load file into pandas dataframe and append to data
+            date = str(start).replace("-", "_")
+            data.append(
+                pd.read_csv(
+                    f"/share/scratch1/es-atlas/atlas_jobs_enr_skimmed/atlas_jobs_enr-{date}.csv",
+                    usecols=variables))
+
         if len(data) == 0:
-            raise FileNotFoundError("No files found to load into pandas dataframe!")
-            
-        return pd.concat(data) if len(data) > 1 else data[0]    #Return concatenated data, to have at the end ONE dataframe
-                
-    def plot(self,cfg,data):
+            raise FileNotFoundError(
+                "No files found to load into pandas dataframe!")
+
+        # Return concatenated data, to have at the end ONE dataframe
+        return pd.concat(data) if len(data) > 1 else data[0]
+
+    def plot(self, cfg, data):
         """
-        Create and save the histogram specified by the config 
-        
+        Create and save the histogram specified by the config
+
         :param cfg: Dictionary with the config for the plot
         :param data: Data, used for the plotting
         :return:
         """
-        
-        #Cast column to datetime if it is a datetime column
+
+        # Cast column to datetime if it is a datetime column
         if cfg["datetime"]:
             data[cfg["x"]] = pd.to_datetime(data[cfg["x"]])
-            
-        #Filter data with condition
+
+        # Filter data with condition
         f_data = data.loc[eval(cfg["condition"])]
-        
-        #Now use the filtered data to create the histogram
+
+        # Now use the filtered data to create the histogram
         f, ax = plt.subplots(figsize=cfg["fig_size"])
-        sns.despine(f)    #Remove top and right spine of histogram
+        sns.despine(f)  # Remove top and right spine of histogram
 
         if cfg["normalize"]:
-            sns.histplot(data = f_data,
-                         x = cfg["x"],
+            sns.histplot(data=f_data,
+                         x=cfg["x"],
                          element="step",
-                         hue = cfg["hue"],
-                         bins = cfg["bins"],
-                         alpha = 0,
-                         ax = ax,
+                         hue=cfg["hue"],
+                         bins=cfg["bins"],
+                         alpha=0,
+                         ax=ax,
                          stat="probability",
                          common_norm=False)
         else:
-            ax = sns.histplot(data = f_data,
-                         x = cfg["x"],
-                         element="step",
-                         hue = cfg["hue"],
-                         bins = cfg["bins"],
-                         alpha = 0,
-                         ax=ax)            
-        
-        #Set xticks for the histogram
+            ax = sns.histplot(data=f_data,
+                              x=cfg["x"],
+                              element="step",
+                              hue=cfg["hue"],
+                              bins=cfg["bins"],
+                              alpha=0,
+                              ax=ax)
+
+        # Set xticks for the histogram
         if cfg["xticks"]:
             ax.set_xticks(cfg["xticks"])
-        
+
         if cfg["y_log_scale"]:
             ax.set_yscale("log")
-            
-        #Set x and y label for histogram
+
+        # Set x and y label for histogram
         ax.set(xlabel=cfg["xlabel"], ylabel=cfg["ylabel"])
         ax.set_title(cfg["title"])
-        
+
         plt.xticks(rotation=cfg["x_rotate"])
-        
-        #Save histogram as .pdf file
-        plt.savefig(cfg["hist_name"]  + ".pdf")
-        
+
+        # Save histogram as .pdf file
+        plt.savefig(cfg["hist_name"] + ".pdf")
+
     def create_plots(self):
-            
-        #First create configs dict, which collects all cfgs for each non overlapping date_range
-        cfgs_dict = self.group_cfg(self.cfgs)
-            
-        #Create plots for all the date_ranges
-        for date_range in cfgs_dict:
-                
-        #Load data for all the variables used in the cfgs for each date_range
-        variables = self.cfgs_to_variables(cfgs = cfgs_dict[date_range])
-        data = self.load_data(date_range = date_range, variables=variables)
-                
-        #Create plots for each config
-        for cfg in cfgs_dict[date_range]:
-            self.plot(cfg,data)
-                    
         
- 
+        # First create configs dict, which collects all cfgs for each non
+        # overlapping date_range
+        cfgs_dict = self.group_cfg(self.cfgs)
+
+        # Create plots for all the date_ranges
+        for date_range in cfgs_dict:
+
+            # Load data for all the variables used in the cfgs for each
+            # date_range
+            variables = self.cfgs_to_variables(cfgs=cfgs_dict[date_range])
+            data = self.load_data(date_range=date_range, variables=variables)
+
+        # Create plots for each config
+        for cfg in cfgs_dict[date_range]:
+            self.plot(cfg, data)
