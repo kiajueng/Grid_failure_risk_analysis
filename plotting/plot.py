@@ -87,7 +87,7 @@ class hist_plot():
             end = datetime.datetime.strptime(config[end_date],"%Y_%m_%d").date()
             
             #Add condition that modificationtime is larger than start and smaller than end time, since the files are ordered after their modification time
-            if config["condition"] = "":
+            if config["condition"] == "":
                 config["condition"] += f'data["modificationtime"] > datetime.datetime.strptime({config[start_date]},"%Y_%m_%d").date() & data["modificationtime"] < datetime.datetime.strptime({config[end_date]},"%Y_%m_%d").date()'
                 
             else:
@@ -132,7 +132,7 @@ class hist_plot():
         for cfg in cfgs: 
             variables += cfg["variables"]
 
-        return variables
+        return list(set(variables))
         
     def load_data(self,date_range,variables):
         """
@@ -211,21 +211,21 @@ class hist_plot():
         #Save histogram as .pdf file
         plt.savefig(cfg["hist_name"]  + ".pdf")
         
-        def create_plots(self):
+    def create_plots(self):
             
-            #First create configs dict, which collects all cfgs for each non overlapping date_range
-            cfgs_dict = self.group_cfg(self.cfgs)
+        #First create configs dict, which collects all cfgs for each non overlapping date_range
+        cfgs_dict = self.group_cfg(self.cfgs)
             
-            #Create plots for all the date_ranges
-            for date_range in cfgs_dict:
+        #Create plots for all the date_ranges
+        for date_range in cfgs_dict:
                 
-                #Load data for all the variables used in the cfgs for each date_range
-                variables = self.cfgs_to_variables(cfgs = cfgs_dict[date_range])
-                data = self.load_data(date_range = date_range, variables=variables)
+        #Load data for all the variables used in the cfgs for each date_range
+        variables = self.cfgs_to_variables(cfgs = cfgs_dict[date_range])
+        data = self.load_data(date_range = date_range, variables=variables)
                 
-                #Create plots for each config
-                for cfg in cfgs_dict[date_range]:
-                    self.plot(cfg,data)
+        #Create plots for each config
+        for cfg in cfgs_dict[date_range]:
+            self.plot(cfg,data)
                     
         
  
