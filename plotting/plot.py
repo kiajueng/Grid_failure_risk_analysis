@@ -20,7 +20,7 @@ example_conifg = {start_date: Start date to read the data from (Last modificatio
                   hue: Column name, whose unique values are used as class color for stacked histo (string) or None if no classes (None-type),
                   x: Column name, used to plot on the x-axis (string),
                   x_rotate: Degree, to define how much the x-labels are rotated (float),
-                  datetime: Boolean to say if the x variable has datettime as dtype or not (Bool,
+                  datetime_var: Variables which have to turned into datetime (list),
                   condition: String of conditions, transformed later to expression (USE data[variable] instead of variable) (string),
                   y_log_scale: Boolean, to decide whether we want to scale the y-axis logarithmic or not (bool)
                   }
@@ -129,22 +129,23 @@ class hist_plot():
 
         return cfg_groups
 
-    def cfgs_to_variables(self, cfgs):
+    def cfgs_to_variables(self, cfgs, option="variables"):
         """
         Takes list of configs as input and return all variables needed for the list of configs
-
+        
+        :param option: String, defining to either return a unique list of variables or the unique list of date time variables which needs to be transformed
         :param cfgs: List of config files
-        :return variables: List of variables needed for the plotting
+        :return variables: List of (date time)-variables needed for the plotting
         """
 
         variables = []
 
         for cfg in cfgs:
-            variables += cfg["variables"]
+            variables += cfg[option]
 
         return list(set(variables))
 
-    def load_data(self, date_range, variables):
+    def load_data(self, date_range, variables, dt_var):
         """
         Load the data from the files specified in config and concatenate into one pandas dataframe
 
@@ -165,9 +166,12 @@ class hist_plot():
         if len(data) == 0:
             raise FileNotFoundError(
                 "No files found to load into pandas dataframe!")
+        
+        #Concatenate all days and tranform datetime columns to datetime objects
+        concat_data = pd.concat(data) if len(data) > 1 else data[0]
+        concat_data[dt_var] = concat_data[dt_var].apply(pd.to_datetime, errors="coerce")
 
-        # Return concatenated data, to have at the end ONE dataframe
-        return pd.concat(data) if len(data) > 1 else data[0]
+        return concat_data
 
     def plot(self, cfg, data):
         """
@@ -177,14 +181,6 @@ class hist_plot():
         :param data: Data, used for the plotting
         :return:
         """
-
-        # Cast column to datetime if it is a datetime column
-        if cfg["datetime"]:
-            #data[cfg["x"]] = pd.to_datetime(data[cfg["x"]])
-            data["modificationtime"] = pd.to_datetime(data["modificationtime"])
-            data["starttime"] = pd.to_datetime(data["starttime"])
-            data["endtime"] = pd.to_datetime(data["endtime"])
-
         # Filter data with condition
         f_data = data.loc[eval(cfg["condition"])].reset_index(drop=True)
         # Now use the filtered data to create the histogram
@@ -236,8 +232,17 @@ class hist_plot():
 
             # Load data for all the variables used in the cfgs for each
             # date_range
-            variables = self.cfgs_to_variables(cfgs=cfgs_dict[date_range])
-            data = self.load_data(date_range=date_range, variables=variables)
+            variables = self.cfgs_to_variables(cfgs=cfgs_dict[date_range],option="variables")
+            dt_var = self.cfgs_to_variables(cfgs=cfgs_dict[date_range],option="datetime_var")
+            
+            #Make sure that modificationtime is always loaded and also transformed to datetime
+            if ("modificationtime" not in variables):
+                variables += ["modificationtime"]
+                
+            if ("modificationtime" not in dt_var):
+                dt_var += ["modificationtime"]
+                
+            data = self.load_data(date_range=date_range, variables=variables, dt_var=dt_var)
             
             # Create plots for each config
             for cfg in cfgs_dict[date_range]:
