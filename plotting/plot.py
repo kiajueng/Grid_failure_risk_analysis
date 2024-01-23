@@ -22,6 +22,7 @@ example_conifg = {start_date: Start date to read the data from (Last modificatio
                   x_rotate: Degree, to define how much the x-labels are rotated (float),
                   datetime_var: Variables which have to turned into datetime (list),
                   condition: String of conditions, transformed later to expression (USE data[variable] instead of variable) (string),
+                  stack: Decision whether we want to have a stacked histogram (Bool)
                   y_log_scale: Boolean, to decide whether we want to scale the y-axis logarithmic or not (bool)
                   }
 """
@@ -186,8 +187,8 @@ class hist_plot():
         # Now use the filtered data to create the histogram
         f, ax = plt.subplots(figsize=cfg["fig_size"])
         sns.despine(f)  # Remove top and right spine of histogram
-        if cfg["normalize"]:
-            sns.histplot(data=f_data,
+        if ((cfg["normalize"]) & (not cfg["stack"])):
+            ax = sns.histplot(data=f_data,
                          x=cfg["x"],
                          element="step",
                          hue=cfg["hue"],
@@ -196,13 +197,28 @@ class hist_plot():
                          ax=ax,
                          stat="probability",
                          common_norm=False)
-        else:
+        elif ((not cfg["normalize"]) & (not cfg["stack"])):
             ax = sns.histplot(data=f_data,
                               x=cfg["x"],
                               element="step",
                               hue=cfg["hue"],
                               bins=cfg["bins"],
                               alpha=0,
+                              ax=ax)
+        elif ((cfg["stack"]) & (cfg["normalize"])):
+            ax = sns.histplot(data=f_data,
+                              x=cfg["x"],
+                              multiple="stack",
+                              hue=cfg["hue"],
+                              bins=cfg["bins"],
+                              stat="probability",
+                              ax=ax)
+        else:
+            ax = sns.histplot(data=f_data,
+                              x=cfg["x"],
+                              multiple="stack",
+                              hue=cfg["hue"],
+                              bins=cfg["bins"],
                               ax=ax)
 
         # Set xticks for the histogram
