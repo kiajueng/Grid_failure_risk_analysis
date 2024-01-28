@@ -235,7 +235,7 @@ class hist_plot():
         plt.xticks(rotation=cfg["x_rotate"])
 
         # Save histogram as .pdf file
-        plt.savefig(cfg["hist_name"] + ".pdf")
+        plt.savefig(cfg["hist_name"] + ".pdf",bbox_inches='tight')
 
     def create_plots(self):
         
