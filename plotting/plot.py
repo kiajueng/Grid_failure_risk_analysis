@@ -19,11 +19,13 @@ example_conifg = {start_date: Start date to read the data from (Last modificatio
                   normalize: Decision, wheter to normalize the histogram or not (Boolean),
                   hue: Column name, whose unique values are used as class color for stacked histo (string) or None if no classes (None-type),
                   x: Column name, used to plot on the x-axis (string),
+                  y: Column name, used to plot on the y-axis for 2D histograms (string). Set to None as default if only 1D histograms desired (None-type)
                   x_rotate: Degree, to define how much the x-labels are rotated (float),
                   datetime_var: Variables which have to turned into datetime (list),
                   condition: String of conditions, transformed later to expression (USE data[variable] instead of variable) (string),
-                  stack: Decision whether we want to have a stacked histogram (Bool)
+                  type: Type of plot, choose either 'stack', '2D', or 'step' (string) 
                   y_log_scale: Boolean, to decide whether we want to scale the y-axis logarithmic or not (bool)
+                  x_log_scale: Boolean, to decide whether we want to scale the x-axis logarithmic or not (bool)
                   }
 """
 
@@ -187,46 +189,71 @@ class hist_plot():
         # Now use the filtered data to create the histogram
         f, ax = plt.subplots(figsize=cfg["fig_size"])
         sns.despine(f)  # Remove top and right spine of histogram
-        if ((cfg["normalize"]) & (not cfg["stack"])):
-            ax = sns.histplot(data=f_data,
-                         x=cfg["x"],
-                         element="step",
-                         hue=cfg["hue"],
-                         bins=cfg["bins"],
-                         alpha=0,
-                         ax=ax,
-                         stat="probability",
-                         common_norm=False)
-        elif ((not cfg["normalize"]) & (not cfg["stack"])):
+        if ((cfg["normalize"]) & (cfg["type"] == "step")):
             ax = sns.histplot(data=f_data,
                               x=cfg["x"],
                               element="step",
                               hue=cfg["hue"],
                               bins=cfg["bins"],
                               alpha=0,
-                              ax=ax)
-        elif ((cfg["stack"]) & (cfg["normalize"])):
+                              ax=ax,
+                              stat="probability",
+                              common_norm=False,
+            )
+        elif ((not cfg["normalize"]) & (cfg["type"] == "step")):
+            ax = sns.histplot(data=f_data,
+                              x=cfg["x"],
+                              element="step",
+                              hue=cfg["hue"],
+                              bins=cfg["bins"],
+                              alpha=0,
+                              ax=ax,
+            )
+        elif ((cfg["type"] == "stack") & (cfg["normalize"])):
             ax = sns.histplot(data=f_data,
                               x=cfg["x"],
                               multiple="stack",
                               hue=cfg["hue"],
                               bins=cfg["bins"],
                               stat="probability",
-                              ax=ax)
-        else:
+                              ax=ax,
+            )
+        elif ((cfg["type"] == "stack") & (not cfg["normalize"])):
             ax = sns.histplot(data=f_data,
                               x=cfg["x"],
                               multiple="stack",
                               hue=cfg["hue"],
                               bins=cfg["bins"],
-                              ax=ax)
-
+                              ax=ax,
+            )
+        elif ((cfg["type"] == "2D") & (not cfg["normalize"])):
+            ax = sns.histplot(data=f_data,
+                              x=cfg["x"],
+                              y=cfg["y"],
+                              bins=cfg["bins"],
+                              cbar=True,
+                              ax=ax,
+            )
+        elif ((cfg["type"] == "2D") & (cfg["normalize"])):
+            ax = sns.histplot(data=f_data,
+                              x=cfg["x"],
+                              y=cfg["y"],
+                              bins=cfg["bins"],
+                              cbar=True,
+                              stat="probability",
+                              ax=ax,
+            )
+        else:
+            assert False, "No valid plotting option"
         # Set xticks for the histogram
         if cfg["xticks"]:
             ax.set_xticks(cfg["xticks"])
 
         if cfg["y_log_scale"]:
             ax.set_yscale("log")
+
+        if cfg["x_log_scale"]:
+            ax.set_xscale("log")
 
         # Set x and y label for histogram
         ax.set(xlabel=cfg["xlabel"], ylabel=cfg["ylabel"])
