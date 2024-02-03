@@ -150,7 +150,7 @@ class training():
                 if (self.early_stopping["ref_loss"] - test_loss) < self.early_stopping["min_delta"]:
                     self.early_stopping["count"] += 1
 
-                     if self.early_stopping["count"] > self.early_stopping["patience"]:
+                    if self.early_stopping["count"] > self.early_stopping["patience"]:
                          break
                 else:
                     self.early_stopping["count"] = 0
