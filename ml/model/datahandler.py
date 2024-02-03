@@ -60,8 +60,8 @@ class TabularDataset(Dataset):
         feat_cols.remove("new_weights")
         feat_cols.remove("jobstatus")
         
-        self.w = data["new_weights"].values
-        self.y = data["jobstatus"].values
+        self.w = data["new_weights"].values[:,None]
+        self.y = data["jobstatus"].values[:,None]
         self.x = data[feat_cols].values
 
     def __len__(self):

@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from tqdm import tqdm
+import numpy as np
 
 class training():
 
@@ -33,7 +34,7 @@ class training():
         self.num_epochs = num_epochs
         self.early_stopping = {"activate":early_stopping, "ref_loss":np.inf, "count":0, "min_delta": min_delta, "patience": patience}
 
-    def accuracy(correct, total):
+    def accuracy(self,correct, total):
         """Function to calculate the accuracy
         
         :param correct: Number of correctly classified samples
@@ -68,10 +69,10 @@ class training():
             y_pred = model(x)
 
             #Compute loss
-            loss_unweighted = loss_fn(y_pred,y)
+            loss_unweighted = torch.mean(loss_fn(y_pred,y))
             losses_train.append(loss_unweighted.detach().numpy())
 
-            loss = torch.mean(w*loss_fn(y_pred,y,reduction=None))
+            loss = torch.mean(w*loss_fn(y_pred,y))
 
             #Calculate accuracy
             correct += torch.sum(torch.argmax(y_pred,dim=1) == y).detach().numpy()
@@ -101,13 +102,13 @@ class training():
         total = 0
 
         with torch.no_grad():
-            for x,y in test_dataloader:
+            for x,y,w in test_dataloader:
 
                 #Forwards pass
                 y_pred = model(x)
 
                 #Compute loss
-                loss = loss_fn(y_pred,y)
+                loss = torch.mean(loss_fn(y_pred,y))
                 losses_test.append(loss.detach().numpy())
 
                 #Calculate accuracy
@@ -116,9 +117,9 @@ class training():
                 #Add the batchsize to total
                 total += x.shape[0]
 
-        return (np.mean(losses_test), accuracy(correct,total))
+        return (np.mean(losses_test), self.accuracy(correct,total))
 
-    def run_training(self, path):
+    def __call__(self, path):
         """
         Run training of the model 
         
@@ -133,11 +134,11 @@ class training():
         test_losses = {}
         test_accs = {}
 
-        for i in tqdm(range(self.num_epoch)):
+        for i in tqdm(range(self.num_epochs)):
             print("Epoch: ",i)
             
             #Get the test_loss and test_acc first so the losses and accuracy shows performance of the same model state
-            test_loss, test_acc = self.test_step(self.test_dataloader, self.model, self.loss_fn0)
+            test_loss, test_acc = self.test_step(self.test_dataloader, self.model, self.loss_fn)
             train_loss, train_acc = self.train_step(self.train_dataloader, self.optimizer, self.model, self.loss_fn)
             
             test_losses[i] = test_loss
@@ -145,6 +146,7 @@ class training():
             train_losses[i] = train_loss
             train_accs[i] = train_acc
             
+            print(f"Train loss: {train_loss}, Test loss: {test_loss}")
             #Early stopping mechanism
             if self.early_stopping["activate"]:
                 if (self.early_stopping["ref_loss"] - test_loss) < self.early_stopping["min_delta"]:
@@ -178,6 +180,4 @@ class training():
         torch.save({
                     "model_state_dict": model.state_dict(),
                     "optimizer_state_dict": optimizer.state_dict(),
-                    }, path + "/" + "model_checkpoint.tar"
-                   
-        
+                    }, path + "/" + "model_checkpoint.tar")
