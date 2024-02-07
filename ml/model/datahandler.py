@@ -8,17 +8,17 @@ import pickle
 def load_data(cols, jobtype):
     ddf = []
     
-    for file in glob.glob("/share/scratch1/es-atlas/atlas_jobs_enr_skimmed/*2023_10_23*"):
-        data = dd.read_csv(file, usecols=cols)
-        data =  data[(data["new_weights"] != 0) & (data["jobstatus"] == jobtype) & (data["cpu_eff"] > 0.05)]
-        if jobtype == "failed":
-            data["jobstatus"] = data["jobstatus"].map({jobtype:0})
-        else:
-            data["jobstatus"] = data["jobstatus"].map({jobtype:1})
-        #data = data.astype({"jobstatus":"int16"})
-        data = data.astype("float64")
-        ddf.append(data)
-        
+    for file in glob.glob("/share/scratch1/es-atlas/atlas_jobs_enr_skimmed/*2023*"):
+        if ("2023_09" in file) | ("2023_08" in file):
+            data = dd.read_csv(file, usecols=cols)
+            data = data.dropna()
+            data =  data[(data["new_weights"] != 0) & (data["jobstatus"] == jobtype) & (data["cpu_eff"] > 0.05)]
+            if jobtype == "failed":
+                data["jobstatus"] = data["jobstatus"].map({jobtype:0})
+            else:
+                data["jobstatus"] = data["jobstatus"].map({jobtype:1})
+            data = data.astype("float64")
+            ddf.append(data)
     ddf = dd.concat(ddf)
     return ddf
 

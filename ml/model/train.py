@@ -71,7 +71,7 @@ class training():
             #Compute loss
             loss_unweighted = torch.mean(loss_fn(y_pred,y))
             losses_train.append(loss_unweighted.detach().numpy())
-
+            
             loss = torch.mean(w*loss_fn(y_pred,y))
 
             #Calculate accuracy
