@@ -5,11 +5,11 @@ import pandas as pd
 from torch.utils.data import Dataset, DataLoader
 import pickle
 
-def load_data(cols, jobtype):
+def load_data(cols, jobtype,cond):
     ddf = []
     
     for file in glob.glob("/share/scratch1/es-atlas/atlas_jobs_enr_skimmed/*2023*"):
-        if ("2023_09" in file) | ("2023_08" in file):
+        if eval(cond):
             data = dd.read_csv(file, usecols=cols)
             data = data.dropna()
             data =  data[(data["new_weights"] != 0) & (data["jobstatus"] == jobtype) & (data["cpu_eff"] > 0.05)]
@@ -22,10 +22,10 @@ def load_data(cols, jobtype):
     ddf = dd.concat(ddf)
     return ddf
 
-def train_test_split(split,cols):
+def train_test_split(split,cols,seed,cond):
 
-    train_fail, test_fail= load_data(cols,jobtype="failed").random_split(split,shuffle=True)
-    train_fin, test_fin = load_data(cols, jobtype="finished").random_split(split,shuffle=True)
+    train_fail, test_fail= load_data(cols,jobtype="failed",cond=cond).random_split(split,shuffle=True, random_state = seed)
+    train_fin, test_fin = load_data(cols, jobtype="finished",cond=cond).random_split(split,shuffle=True, random_state = seed)
 
     train = dd.concat([train_fail,train_fin]).compute()
     test = dd.concat([test_fail,test_fin]).compute()

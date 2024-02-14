@@ -6,12 +6,13 @@ from model import MLP_binary
 from datahandler import train_test_split, minmax_scaler,TabularDataset
 from torch.utils.data import Dataset, DataLoader
 from train import training
+from torch.optim.lr_scheduler import StepLR
 
 print("LOADING DATA...")
 cols = ["io_intensity","wall_time","diskio","memory_leak","IObytesWriteRate", "IObytesReadRate","IObytesRead","IObytesWritten","outputfilebytes","actualcorecount","inputfilebytes","cpu_eff", "cpuconsumptiontime","new_weights", "jobstatus"]
 features = ["io_intensity","wall_time","diskio","memory_leak","IObytesWriteRate", "IObytesReadRate","IObytesRead","IObytesWritten","outputfilebytes","actualcorecount","inputfilebytes","cpu_eff", "cpuconsumptiontime"]
 
-train_data, test_data = train_test_split([0.8,0.2],cols)
+train_data, test_data = train_test_split([0.8,0.2],cols,seed=0,cond='("2023_09_01" in file) | ("2023_08_01" in file) | ("2023_10_01" in file)')
 
 train_data.loc[:,features] = minmax_scaler(train_data.loc[:,features], "/home/kyang/master_grid/ml/model/model")
 
@@ -37,10 +38,15 @@ model = MLP_binary(input_size = input_size,
                    output_size = output_size)
 model = model.double()
 loss_fn = nn.BCELoss(reduction="none")
-num_epochs = 30
-early_stopping = False
-optimizer = NAdam(model.parameters())
+num_epochs = 60
+early_stopping = True
+optimizer = NAdam(model.parameters(),lr=1e-3, weight_decay=1e-5)
+scheduler = StepLR(optimizer, step_size = 15, gamma=0.5)
 
+print("LOAD MODEL CHECKPOINT")
+#model_checkpoint = torch.load("/home/kyang/master_grid/ml/model/model/model_checkpoint_30_epoch.tar")
+
+#checkpoint = torch.load("/home/kyang/master_grid/ml/model/model/model_checkpoint.tar")
 print("START TRAINING...")
-train_model = training(train_dataloader,test_dataloader,optimizer,model,loss_fn,num_epochs)
+train_model = training(train_dataloader,test_dataloader,optimizer,model,loss_fn,num_epochs,scheduler=scheduler)
 train_model(path="/home/kyang/master_grid/ml/model/model")
