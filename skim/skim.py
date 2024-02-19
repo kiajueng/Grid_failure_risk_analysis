@@ -12,7 +12,7 @@ parser.add_argument('-y', '--year', type = str, required=True)
 args = parser.parse_args()
 
 #Read the variables to keep from csv file
-data_to_keep = pd.read_csv('/home/kyang/master/skim/var_to_keep.csv')['variables'].values
+data_to_keep = pd.read_csv('/home/kyang/master_grid/skim/var_to_keep.csv')['variables'].values
 
 #CSV files to load
 files = glob.glob(f'user.swozniew/*{args.year}_{args.month}_{args.day}*') 
@@ -28,4 +28,4 @@ if len(agg_df) == 0:
 skimmed_day_data = pd.concat(agg_df)
 
 #Safe skimmed data files
-skimmed_day_data.to_csv(f'/share/scratch1/es-atlas/atlas_jobs_enr_skimmed/atlas_jobs_enr-{args.year}_{args.month}_{args.day}.csv')
+skimmed_day_data.to_csv(f'/share/scratch1/es-atlas/atlas_jobs_enr_skimmed/atlas_jobs_enr-{args.year}_{args.month}_{args.day}.csv', index=False)

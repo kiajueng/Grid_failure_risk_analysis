@@ -36,7 +36,7 @@ def create_skim_script(number,year,month,day):
     f.write("\n")
     
     #Execute python script and exit with exit code of python script
-    f.write(f"python3 /home/kyang/master/skim/skim.py --day $day --month $month --year $year\n") 
+    f.write(f"python3 /home/kyang/master_grid/skim/skim.py --day $day --month $month --year $year\n") 
     f.write("python_exit_code=$? #Get the exit code of the python script -> In HTCondor exit code not passed on properly\n")
     f.write("exit $python_exit_code\n")
     f.close()
@@ -46,13 +46,13 @@ def create_skim_script(number,year,month,day):
 
 #Initialize start date
 s_day = 1 
-s_month = 8
+s_month = 12
 s_year = 2023
 s_date = datetime.date(s_year,s_month,s_day)
 
 #Initialize end date
-e_day = 30 
-e_month = 11 
+e_day = 31 
+e_month = 12 
 e_year = 2023
 e_date = datetime.date(e_year,e_month,e_day)
 

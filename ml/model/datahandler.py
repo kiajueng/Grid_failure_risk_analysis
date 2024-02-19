@@ -55,17 +55,25 @@ def minmax_scaler(data_x, path,read_file = False):
     
 class TabularDataset(Dataset):
 
-    def __init__(self, data):
-        feat_cols = list(data.columns)
-        feat_cols.remove("new_weights")
-        feat_cols.remove("jobstatus")
+    def __init__(self, data, features, index=False):
+
+        self.return_index = index
+        
+        if (self.return_index & ("index" in data.columns)):
+            self.index = data["index"].values[:,None]
+        elif (self.return_index & ("index" not in data.columns)):
+            self.index = data.reset_index()["index"].values[:,None]
         
         self.w = data["new_weights"].values[:,None]
         self.y = data["jobstatus"].values[:,None]
-        self.x = data[feat_cols].values
+        self.x = data[features].values
 
     def __len__(self):
         return len(self.w)
 
     def __getitem__(self, idx):
+
+        if self.return_index:
+            return self.index[idx], self.x[idx], self.y[idx], self.w[idx]
+
         return self.x[idx], self.y[idx], self.w[idx]

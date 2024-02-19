@@ -12,14 +12,14 @@ print("LOADING DATA...")
 cols = ["io_intensity","wall_time","diskio","memory_leak","IObytesWriteRate", "IObytesReadRate","IObytesRead","IObytesWritten","outputfilebytes","actualcorecount","inputfilebytes","cpu_eff", "cpuconsumptiontime","new_weights", "jobstatus"]
 features = ["io_intensity","wall_time","diskio","memory_leak","IObytesWriteRate", "IObytesReadRate","IObytesRead","IObytesWritten","outputfilebytes","actualcorecount","inputfilebytes","cpu_eff", "cpuconsumptiontime"]
 
-train_data, test_data = train_test_split([0.8,0.2],cols,seed=0,cond='("2023_09_01" in file) | ("2023_08_01" in file) | ("2023_10_01" in file)')
+train_data, test_data = train_test_split([0.8,0.2],cols,seed=0,cond='("2023_09" in file) | ("2023_08" in file) | ("2023_10" in file)')
 
 train_data.loc[:,features] = minmax_scaler(train_data.loc[:,features], "/home/kyang/master_grid/ml/model/model")
 
 test_data.loc[:,features] = minmax_scaler(test_data.loc[:,features], "/home/kyang/master_grid/ml/model/model",True)
 
-train_dataset = TabularDataset(train_data)
-test_dataset= TabularDataset(test_data)
+train_dataset = TabularDataset(train_data,features=features,index=False)
+test_dataset= TabularDataset(test_data,features=features,index=False)
 
 train_dataloader = DataLoader(train_dataset, batch_size = 128, shuffle=True)
 test_dataloader = DataLoader(test_dataset, batch_size = 128, shuffle=False)

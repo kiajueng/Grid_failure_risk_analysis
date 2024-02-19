@@ -15,7 +15,7 @@ columns = [column for column in data.columns if "Unnamed" in column]
 data.drop(columns,axis=1,inplace=True)
 
 #Create a new column bintime
-data["bintime"] = pd.to_datetime(data["modificationtime"]).dt.floor("1H")
+data["bintime"] = pd.to_datetime(data["modificationtime"]).dt.floor("1h")
 
 #Get the counts, grouped by bintime, computingsite and jobstatus
 counts = data.groupby(["bintime","computingsite","jobstatus"]).count()
