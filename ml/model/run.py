@@ -44,9 +44,8 @@ optimizer = NAdam(model.parameters(),lr=1e-3, weight_decay=1e-5)
 scheduler = StepLR(optimizer, step_size = 15, gamma=0.5)
 
 print("LOAD MODEL CHECKPOINT")
-#model_checkpoint = torch.load("/home/kyang/master_grid/ml/model/model/model_checkpoint_30_epoch.tar")
+checkpoint = torch.load("/home/kyang/master_grid/ml/model/model/model_checkpoint.tar")
 
-#checkpoint = torch.load("/home/kyang/master_grid/ml/model/model/model_checkpoint.tar")
 print("START TRAINING...")
-train_model = training(train_dataloader,test_dataloader,optimizer,model,loss_fn,num_epochs,scheduler=scheduler)
+train_model = training(train_dataloader,test_dataloader,optimizer,model,loss_fn,num_epochs,scheduler=scheduler,checkpoint=checkpoint)
 train_model(path="/home/kyang/master_grid/ml/model/model")
