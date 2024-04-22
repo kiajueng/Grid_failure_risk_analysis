@@ -22,6 +22,7 @@ def confusion(data: pd.DataFrame,
     
     cut: float
         Value, which sets the threshold, when a value is rounded up to 1 (Have to be between 0 and 1)
+        This number is used in the file name as extra information
 
     Returns
     ---
@@ -43,20 +44,23 @@ def confusion(data: pd.DataFrame,
     false_pos = len(data_conf[(data_conf["jobstatus"]==0) & (data_conf["jobstatus"] != data_conf[pred_col])])
     
     #Create confusion matrix as pandas datarfame
-    confusion = pd.DataFrame({"Pred. Finished":np.nan, "Pred. Failed":np.nan}, index = ["True Finished, True Failed"])
+    confusion = pd.DataFrame({"Pred. Finished":np.nan, "Pred. Failed":np.nan}, index = ["True Finished", "True Failed"])
     confusion.loc["True Finished","Pred. Finished"] = true_pos / (true_pos + false_neg)
     confusion.loc["True Finished","Pred. Failed"] = false_neg / (true_pos + false_neg)
     confusion.loc["True Failed","Pred. Finished"] = false_pos / (true_neg + false_pos)
     confusion.loc["True Failed","Pred. Failed"] = true_neg / (true_neg + false_pos)
+
+    f,ax = plt.subplots(figsize=(5,5))
     
     #Create heatmap with seaborn
-    sns.heatmap(confusion, annot=True, cmap="viridis")
-    plt.savefig("confusion.pdf",bbox_inches="tight")
+    sns.heatmap(confusion, annot=True, cmap="viridis", ax=ax, fmt=".2f")
+    plt.savefig(f"confusion_cut_{cut}.pdf",bbox_inches="tight")
 
     return 
 
 def score_hist(data: pd.DataFrame,
-               pred_col: str = "prediction"
+               pred_col: str = "prediction",
+               weight_cut: float = 0.3,
 ) -> None:
     """Create the histogram for the output score of the model
 
@@ -67,6 +71,10 @@ def score_hist(data: pd.DataFrame,
 
     pred_col: str
         String, determening in which column the prediction of the model is saved
+
+    weight_cut : float
+        Float, setting the lower limit for the weights considered for this plot
+        Number is used in the file name as extra information
     
     Returns
     ---
@@ -84,13 +92,14 @@ def score_hist(data: pd.DataFrame,
     f,ax = plt.subplots(figsize=(10,5))
     sns.histplot(data=data_copy,x="prediction",hue="jobstatus",bins=20,alpha=0,element="step",stat="probability", ax=ax, common_norm = False)
     sns.move_legend(ax, "upper left", bbox_to_anchor=(1.04, 1))
-    plt.savefig("score_hist.pdf",bbox_inches="tight")
+    plt.savefig(f"score_hist_wcut_{round(weight_cut,2)}.pdf",bbox_inches="tight")
     
     return
 
 def loss_acc_plot(train: dict[int,float],
                   test: dict[int,float],
                   metric: str,
+                  model_name:str,
 ) -> None:
     """Create line plot for the metrics loss or accuracy for the test and train dataset
 
@@ -107,6 +116,9 @@ def loss_acc_plot(train: dict[int,float],
     metric: str
         Describes the metric which is plotted.
 
+    model_name: str
+        Name of the model, which is used as extra information when saving the file
+
     Returns
     ---
     None
@@ -114,11 +126,11 @@ def loss_acc_plot(train: dict[int,float],
 
     fig = plt.figure()
     plt.plot(train.keys(), train.values(), label = "train",color="blue")
-    plt.plot(test.keys(), test.values(), label = "test",color="black")
+    plt.plot(test.keys(), test.values(), label = "validation",color="black")
     plt.xlabel("Epoch")
     plt.ylabel(f"{metric}".capitalize())
     plt.legend()
-    plt.savefig(f"{metric}.pdf",bbox_inches='tight')
+    plt.savefig(f"{metric}_{model_name}.pdf",bbox_inches='tight')
 
     return
 
@@ -207,10 +219,16 @@ def main(start_day: int,
     
     print("CREATING PLOTS...")
     
-    confusion(data=data,pred_col=pred_col,cut=round_cut)
-    score_hist(data=data,pred_col = pred_col)
-    loss_acc_plot(train_loss_acc["loss"], test_loss_acc["loss"], "loss")
-    loss_acc_plot(train_loss_acc["accuracy"], test_loss_acc["accuracy"], "accuracy")
+    confusion(data=data,pred_col=pred_col,cut=0.5)
+    confusion(data=data,pred_col=pred_col,cut=0.55)
+    confusion(data=data,pred_col=pred_col,cut=0.6)
+    confusion(data=data,pred_col=pred_col,cut=0.65)
+    confusion(data=data,pred_col=pred_col,cut=0.7)
+    confusion(data=data,pred_col=pred_col,cut=0.75)
+
+    score_hist(data=data,pred_col = pred_col, weight_cut = weight_cut)
+    loss_acc_plot(train_loss_acc["loss"], test_loss_acc["loss"], "loss", model_name = "weight_based")
+    loss_acc_plot(train_loss_acc["accuracy"], test_loss_acc["accuracy"], "accuracy",model_name = "weight_based")
 
 
 if __name__=="__main__":
