@@ -5,7 +5,8 @@ import matplotlib.pyplot as plt
 import glob
 import datetime
 from typing import Union
-
+import copy 
+import numpy as np 
 """
 example_conifg = {start_date: Start date to read the data from (Last modification time), in format YYYY_MM_DD, (string) *
                   end_date: End date to read the data from (Last modification time), in format YYYY_MM_DD, (string) *
@@ -31,74 +32,12 @@ example_conifg = {start_date: Start date to read the data from (Last modificatio
                   x_log_scale: Boolean, to decide whether we want to scale the x-axis logarithmic or not (bool)
                   class_color: Dictionary, giving each class an color {class:color} (Dictionary). If no color chosen, set the default value to None.
                   hue_order: List of strings, giving the order of the classes, used to create the legend (List of strings). Default: None
+                  overflow: Float, threshold where every value above is projected down to overflow, to create overflow bins of x variable (Default: np.inf) (Float)
+                  underflow: Float, threshold where every value below is projected down to overflow, to create underflow bins of x variable (Default: -np.inf) (Float)
+                  hue_mapping: Tuple, with the type as string and the mapping as dictionary, to map the column used for hue to other values and potentially other type (str,dict)
                   }
 """
 
-
-def cfg_setter(self,cfg: dict[str,Union[datetime.date,list[str], float, bool, None, tuple[float,float]]]
-) -> dict[str,Union[datetime.date,list[str], float, bool, None, tuple[float,float]]]:
-    """ Set default values and check if mandatory options are set
-    
-    Parameters
-    ---
-    cfg: dict
-        Dictionary, with all the options for the plot, which needs to be created
-
-    Returns
-    ---
-    cfg: dict
-        Dictionary, where every value is checked.
-    """
-
-    cfg = cfg
-    
-    #Mandatory options
-    mand_opt = ["start_date",
-                "end_date",
-                "variables",
-                "hist_name",
-                "ylabel",
-                "xlabel",
-                "x",
-                "datetime_var",
-    ]
-        
-    #Defaultet options, if not specified
-    default_opt = {"title":None,
-                   "path":"/share/scratch1/es-atlas/atlas_jobs_enr_skimmed/",
-                   "files":[],
-                   "fig_size":(8,6),
-                   "bins":"auto",
-                   "xticks":[],
-                   "stat":"count",
-                   "hue":None,
-                   "y":None,
-                   "x_rotate":0,
-                   "condition":"",
-                   "type":"stack",
-                   "y_log_scale":False,
-                   "x_log_scale":False,
-                   "class_color":None
-                   "hue_order":None
-    }
-
-    #Options set in config file
-    cfg_opt = list(cfg.keys())
-    
-    for opt in mand_opt:
-        if opt not in cfg_opt:
-            raise KeyError(
-                f"The Option {opt} is not set in the config"
-            )
-
-    for opt in default_opt:
-        if opt not in cfg_opt:
-            cfg[opt] = default_opt[opt]
-
-    if cfg["path"][-1] != "/":
-        cfg["path"] += "/"
-
-    return cfg
             
     
 class hist_plot():
@@ -111,6 +50,73 @@ class hist_plot():
         :return:
         """
         self.cfgs = cfgs
+
+    def cfg_setter(self,cfg: dict[str,Union[datetime.date,list[str], float, bool, None, tuple[float,float]]]
+    ) -> dict[str,Union[datetime.date,list[str], float, bool, None, tuple[float,float]]]:
+        """ Set default values and check if mandatory options are set
+    
+        Parameters
+        ---
+        cfg: dict
+            Dictionary, with all the options for the plot, which needs to be created
+
+        Returns
+        ---
+        cfg: dict
+            Dictionary, where every value is checked.
+        """
+
+        #Mandatory options
+        mand_opt = ["start_date",
+                    "end_date",
+                    "variables",
+                    "hist_name",
+                    "ylabel",
+                    "xlabel",
+                    "x",
+                    "datetime_var",
+        ]
+        
+        #Defaultet options, if not specified
+        default_opt = {"title":None,
+                       "path":"/share/scratch1/es-atlas/atlas_jobs_enr_skimmed/",
+                       "files":[],
+                       "fig_size":(8,6),
+                       "bins":"auto",
+                       "xticks":[],
+                       "stat":"count",
+                       "hue":None,
+                       "y":None,
+                       "x_rotate":0,
+                       "condition":"",
+                       "type":"stack",
+                       "y_log_scale":False,
+                       "x_log_scale":False,
+                       "class_color":None,
+                       "hue_order":None,
+                       "hue_mapping":(),
+                       "overflow": np.inf,
+                       "underflow": -np.inf,
+        }
+
+        #Options set in config file
+        cfg_opt = list(cfg.keys())
+    
+        for opt in mand_opt:
+            if opt not in cfg_opt:
+                raise KeyError(
+                    f"The Option {opt} is not set in the config"
+                )
+
+        for opt in default_opt:
+            if opt not in cfg_opt:
+                cfg[opt] = default_opt[opt]
+
+        if cfg["path"][-1] != "/":
+            cfg["path"] += "/"
+
+
+        return cfg
 
     def group_cfg_path(self, cfgs):
         """
@@ -266,7 +272,9 @@ class hist_plot():
 
             
             concat_data = pd.concat(data) if len(data) > 1 else data[0]
-            concat_data[dt_var] = concat_data[dt_var].apply(pd.to_datetime, errors="coerce")
+            
+            for var in dt_var:
+                concat_data[var] = pd.to_datetime(concat_data[var], errors="coerce")
 
             return concat_data
 
@@ -276,7 +284,7 @@ class hist_plot():
         while start <= end:
             # Load file into pandas dataframe and append to data
             date = str(start).replace("-", "_")
-            for f in glob.glob("{path}*{date}*"):
+            for f in glob.glob(f"{path}*{date}*"):
                 data.append(pd.read_csv(f,usecols=variables))
             start += datetime.timedelta(days=1)
 
@@ -286,7 +294,9 @@ class hist_plot():
         
         #Concatenate all days and tranform datetime columns to datetime objects
         concat_data = pd.concat(data) if len(data) > 1 else data[0]
-        concat_data[dt_var] = concat_data[dt_var].apply(pd.to_datetime, errors="coerce")
+
+        for var in dt_var:
+            concat_data[var] = pd.to_datetime(concat_data[var], errors="coerce")
 
         return concat_data
 
@@ -300,11 +310,17 @@ class hist_plot():
         """
         # Filter data with condition
         f_data = data.loc[eval(cfg["condition"])].reset_index(drop=True)
+        f_data[cfg["x"]] = f_data[cfg["x"]].clip(cfg["underflow"],cfg["overflow"])
+
+        #Map classes of hue to other value with potentially other type
+        if cfg["hue_mapping"]:
+            f_data[cfg["hue"]] = f_data[cfg["hue"]].map(cfg["hue_mapping"][1])
+            f_data[cfg["hue"]] = f_data[cfg["hue"]].astype(cfg["hue_mapping"][0])
 
         # Now use the filtered data to create the histogram
         f, ax = plt.subplots(figsize=cfg["fig_size"])
         sns.despine(f)  # Remove top and right spine of histogram
-        if ((cfg["normalize"]) & (cfg["type"] == "step")):
+        if (cfg["type"] == "step"):
             ax = sns.histplot(data=f_data,
                               x=cfg["x"],
                               element="step",
@@ -317,7 +333,7 @@ class hist_plot():
                               palette=cfg["class_color"],
                               hue_order=cfg["hue_order"],
             )
-        elif ((cfg["type"] == "stack") & (cfg["normalize"])):
+        elif (cfg["type"] == "stack"):
             ax = sns.histplot(data=f_data,
                               x=cfg["x"],
                               multiple="stack",
@@ -328,7 +344,7 @@ class hist_plot():
                               palette=cfg["class_color"],
                               hue_order=cfg["hue_order"],
             )
-        elif ((cfg["type"] == "2D") & (cfg["normalize"])):
+        elif (cfg["type"] == "2D"):
             ax = sns.histplot(data=f_data,
                               x=cfg["x"],
                               y=cfg["y"],
@@ -359,10 +375,14 @@ class hist_plot():
         plt.savefig(cfg["hist_name"] + ".pdf",bbox_inches='tight')
 
     def create_plots(self):
-        
+
+        for i in range(len(self.cfgs)):
+            self.cfg_setter(self.cfgs[i])
+            
         #Plot every config with custom files
         for cfg in self.cfgs:
             if cfg["files"]:
+                print(f'LOAD DATA OF FILES: {cfg["files"]}')
                 data = self.load_data(variables=cfg["variables"],dt_var=cfg["datetime_var"],cfg=cfg)
                 self.plot(cfg,data)
 
@@ -378,12 +398,14 @@ class hist_plot():
 
         # Create plots for all the date_ranges
         for path in cfgs_dict_date:
-            for date_range in cfgs_dict_date["path"]:
+            for date_range in cfgs_dict_date[path]:
+                
+                print(f"LOAD DATA OF PATH {path} for the date range {date_range}")
 
                 # Load data for all the variables used in the cfgs for each
                 # date_range
-                variables = self.cfgs_to_variables(cfgs=cfgs_dict[date_range],option="variables")
-                dt_var = self.cfgs_to_variables(cfgs=cfgs_dict[date_range],option="datetime_var")
+                variables = self.cfgs_to_variables(cfgs=cfgs_dict_date[path][date_range],option="variables")
+                dt_var = self.cfgs_to_variables(cfgs=cfgs_dict_date[path][date_range],option="datetime_var")
             
                 #Make sure that modificationtime is always loaded and also transformed to datetime
                 if ("modificationtime" not in variables):
@@ -395,5 +417,5 @@ class hist_plot():
                 data = self.load_data(variables=variables, dt_var=dt_var,date_range=date_range, path=path)
             
                 # Create plots for each config
-                for cfg in cfgs_dict[date_range]:
+                for cfg in cfgs_dict_date[path][date_range]:
                     self.plot(cfg, data)

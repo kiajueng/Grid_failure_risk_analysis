@@ -39,6 +39,7 @@ def load_data(cols: list[str],
     return data 
 
 def clean_data(data: dd.DataFrame,
+               cols: list[str]
 ) -> dd.DataFrame:
     """Clean the data from nans, delete all rows which is not failed or finished and
        turn "jobstatus" to 0 or 1 as float64 so it can be directly used during the training
@@ -47,6 +48,8 @@ def clean_data(data: dd.DataFrame,
     ---
     data: dd.DataFrame
        Dask dataframe, from which the nan columns are removes and jobstatus casted to float64
+
+    cols: Columns which needs to be turned into floats and is used for training
 
     Returns
     ---
@@ -62,11 +65,12 @@ def clean_data(data: dd.DataFrame,
     
     #Cast failed and finished to 0/1 of type float64
     data["jobstatus"] = data["jobstatus"].map({"failed":0, "finished":1})
-    data = data.astype("float64")
+    data[cols] = data[cols].astype("float64")
 
     return data
 
 def run_preprocessing(cols:list[str],
+                      dt_var:list[str],
                       date: datetime.date,
 ) -> None:
     """Load data from the atlas_jobs_enr_skimmed directory and bring into a form, such that
@@ -77,6 +81,9 @@ def run_preprocessing(cols:list[str],
     ---
     cols: list[str]
         List of strings, where each string represent one column name, which is loaded
+
+    dt_var: list[str]
+        List of strings, where each string represent one column name, which is loaded and should not be casted to float
     
     date: datetime.date
         Datetime.date object, initiating the Date of the data, which is loaded.
@@ -88,10 +95,10 @@ def run_preprocessing(cols:list[str],
     """
     
     #Load Data
-    data = load_data(cols = cols, date = date)
+    data = load_data(cols = cols + dt_var, date = date)
     
     #Clean Data
-    data = clean_data(data)
+    data = clean_data(data,cols)
 
     #Save data with name being the date
     date_str = str(date).replace("-","_")
@@ -116,8 +123,9 @@ if __name__=="__main__":
 
     date = datetime.date(args.year,args.month,args.day)
     cols = ["io_intensity","wall_time","diskio","memory_leak","IObytesWriteRate", "IObytesReadRate","IObytesRead","IObytesWritten","outputfilebytes","actualcorecount","inputfilebytes","cpu_eff", "cpuconsumptiontime","new_weights", "jobstatus"]
-    
-    run_preprocessing(cols=cols, date=date)
+    dt_var = ["modificationtime"]
+
+    run_preprocessing(cols=cols, date=date, dt_var=dt_var)
 
     with open("/home/kyang/master_grid/ml/model/preprocessing/done.txt", "a") as f:
         f.write(f"{str(date).replace('-','_')}\n")

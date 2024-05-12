@@ -49,7 +49,7 @@ def minmax_scaler(data_x, path,read_file = False):
     
 
     for col,minimum,maximum in zip(minima.keys(),minima.values(),maxima.values()):
-        data_x.loc[:,col] = (data_x.loc[:,col] - minimum) / maximum
+        data_x.loc[:,col] = (data_x.loc[:,col] - minimum) / (maximum - minimum)
     
     if not read_file:
         with open(f"{path}/scaler.pkl","wb") as fp:
