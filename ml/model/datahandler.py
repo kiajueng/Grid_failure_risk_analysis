@@ -69,13 +69,14 @@ class TabularDataset(Dataset):
             self.index = data.reset_index()["index"].values[:,None]
     
         self.glob_weight = glob_weight
-
-        self.w = data["new_weights"].values[:,None]
+        
+        if self.glob_weight == None:
+            self.w = data["new_weights"].values[:,None]
         self.y = data["jobstatus"].values[:,None]
         self.x = data[features].values
 
     def __len__(self):
-        return len(self.w)
+        return len(self.y)
 
     def __getitem__(self, idx):
 

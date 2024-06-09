@@ -22,8 +22,6 @@ def main(date,features,checkpoint_path):
     scaled_data = data.copy()
     scaled_data.loc[:,features] = minmax_scaler(scaled_data.loc[:,features], "/home/kyang/master_grid/ml/model/model",True)
     
-    print(scaled_data)
-
     dataset = TabularDataset(scaled_data,features=features,index=True)
     dataloader = DataLoader(dataset,batch_size=256, shuffle=False)
     

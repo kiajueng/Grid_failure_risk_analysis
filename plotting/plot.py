@@ -373,7 +373,10 @@ class hist_plot():
 
         # Save histogram as .pdf file
         plt.savefig(cfg["hist_name"] + ".pdf",bbox_inches='tight')
-
+        
+        #Close figure again
+        plt.close(f)
+        
     def create_plots(self):
 
         for i in range(len(self.cfgs)):
