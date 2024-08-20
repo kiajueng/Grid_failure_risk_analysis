@@ -12,23 +12,23 @@ from torch.utils.data import Dataset, DataLoader
 import argparse
 import datetime
 
-def main(date,features,checkpoint_path):
+def main(date,features,checkpoint_path,scale_path,pred_col="prediction_mask"):
     
     date_str = str(date).replace("-","_")
     
     print("LOAD DATA")
-    data = pd.read_csv(f"/share/scratch1/kiajueng_yang/data/{date_str}.csv")
-    data["prediction"] = np.nan
+    data = pd.read_csv(f"/share/scratch1/kiajueng_yang/data_pred/{date_str}.csv")
+    data[pred_col] = np.nan
     scaled_data = data.copy()
-    scaled_data.loc[:,features] = minmax_scaler(scaled_data.loc[:,features], "/home/kyang/master_grid/ml/model/model",True)
+    scaled_data.loc[:,features] = minmax_scaler(scaled_data.loc[:,features], scale_path,True)
     
     dataset = TabularDataset(scaled_data,features=features,index=True)
     dataloader = DataLoader(dataset,batch_size=256, shuffle=False)
     
     print("INITIALIZE MODEL")
     input_size = len(features)
-    hidden_sizes = [32,64,32]
-    hidden_act_fns = [nn.ReLU(),nn.ReLU(),nn.ReLU()]
+    hidden_sizes = [32,64,64,32]
+    hidden_act_fns = [nn.ReLU(),nn.ReLU(),nn.ReLU(),nn.ReLU()]
     output_act_fn = nn.Sigmoid()
     output_size = 1
 
@@ -51,17 +51,10 @@ def main(date,features,checkpoint_path):
     with torch.no_grad():
         for i,(index,x,y,w) in enumerate(dataloader):
             y_pred = model(x)
-            data.loc[index.detach().numpy().flatten(),["prediction"]] = y_pred.detach().numpy().flatten()
-
-            if i < 2:
-                print(data.loc[index.detach().numpy().flatten(),"prediction"])
+            data.loc[index.detach().numpy().flatten(),[pred_col]] = y_pred.detach().numpy().flatten()
 
     #Save back to csv file
-    if glob.glob(f"/share/scratch1/kiajueng_yang/data_pred/{date_str}.csv"):
-        return 
-    else:
-        data.to_csv(f"/share/scratch1/kiajueng_yang/data_pred/{date_str}.csv", index=False)
-        return 
+    data.to_csv(f"/share/scratch1/kiajueng_yang/data_pred/{date_str}.csv", index=False)
 
 if __name__=="__main__":
 
@@ -72,13 +65,22 @@ if __name__=="__main__":
     args = parser.parse_args()
 
     
-    features = ["io_intensity","wall_time","diskio","memory_leak","IObytesWriteRate", "IObytesReadRate","IObytesRead","IObytesWritten","outputfilebytes","actualcorecount","inputfilebytes","cpu_eff", "cpuconsumptiontime"]
+    features = ["io_intensity","wall_time","diskio","memory_leak","IObytesWriteRate", "IObytesReadRate","IObytesRead","IObytesWritten","actualcorecount","inputfilebytes","cpu_eff"]
 
     date = datetime.date(args.year,args.month,args.day)
 
-    checkpoint_path = "/home/kyang/master_grid/ml/model/model/model_checkpoint.tar"
+    checkpoint_path = "/home/kyang/master_grid/ml/model/model_weights_no_cpu_eff/model_checkpoint.tar"
 
     main(date=date,
          features=features,
          checkpoint_path=checkpoint_path,
+         scale_path = "/home/kyang/master_grid/ml/model/model_weights_no_cpu_eff",
+         pred_col = "prediction_weights_no_cpu_eff",
     )
+
+    with open("/home/kyang/master_grid/ml/model/inject/done.txt", "a+") as f:
+        with open("/home/kyang/master_grid/ml/model/inject/done.txt", "r") as f_read:
+            for line in f_read:
+                if str(date) in line:
+                    exit(0)
+        f.write(f"{str(date)}\n")

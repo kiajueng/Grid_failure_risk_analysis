@@ -72,6 +72,7 @@ def clean_data(data: dd.DataFrame,
 def run_preprocessing(cols:list[str],
                       dt_var:list[str],
                       date: datetime.date,
+                      non_feature_cols: list[str],
 ) -> None:
     """Load data from the atlas_jobs_enr_skimmed directory and bring into a form, such that
        it can be directly used for training and save it into 
@@ -87,6 +88,9 @@ def run_preprocessing(cols:list[str],
     
     date: datetime.date
         Datetime.date object, initiating the Date of the data, which is loaded.
+    
+    non_feature_cols: list[str]
+        List of strings, which are extra columns which are needed later for plotting but are irrelevant for the NN training
 
     Returns
     ---
@@ -95,7 +99,7 @@ def run_preprocessing(cols:list[str],
     """
     
     #Load Data
-    data = load_data(cols = cols + dt_var, date = date)
+    data = load_data(cols = cols + dt_var + non_feature_cols, date = date)
     
     #Clean Data
     data = clean_data(data,cols)
@@ -123,9 +127,10 @@ if __name__=="__main__":
 
     date = datetime.date(args.year,args.month,args.day)
     cols = ["io_intensity","wall_time","diskio","memory_leak","IObytesWriteRate", "IObytesReadRate","IObytesRead","IObytesWritten","outputfilebytes","actualcorecount","inputfilebytes","cpu_eff", "cpuconsumptiontime","new_weights", "jobstatus"]
+    non_feature_cols = ["processingtype"]
     dt_var = ["modificationtime"]
 
-    run_preprocessing(cols=cols, date=date, dt_var=dt_var)
+    run_preprocessing(cols=cols, date=date, dt_var=dt_var, non_feature_cols = non_feature_cols)
 
     with open("/home/kyang/master_grid/ml/model/preprocessing/done.txt", "a") as f:
         f.write(f"{str(date).replace('-','_')}\n")

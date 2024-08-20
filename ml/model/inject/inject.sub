@@ -10,4 +10,4 @@ request_memory = 2GB
 request_disk = 1GB
 request_cpus = 4
 rank = 4
-queue 30
+queue 61

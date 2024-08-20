@@ -1,4 +1,0 @@
-request_memory = 50GB
-request_cpus = 3
-rank = 3
-queue 1

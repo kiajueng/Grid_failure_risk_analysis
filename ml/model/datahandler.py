@@ -5,7 +5,7 @@ import pandas as pd
 from torch.utils.data import Dataset, DataLoader
 import pickle
 
-def load_data(cols,start_date, end_date):
+def load_data(cols,start_date, end_date, weight_cut=0, cpu_eff_cut = 0.05):
 
     ddf = []
 
@@ -14,7 +14,10 @@ def load_data(cols,start_date, end_date):
         date_str = str(start_date).replace("-","_")
         
         data = dd.read_csv(f"/share/scratch1/kiajueng_yang/data/{date_str}.csv", usecols=cols)
-        data =  data[(data["cpu_eff"] > 0.05)]
+        if weight_cut > 0:
+            data =  data[(data["cpu_eff"] > cpu_eff_cut) & ((data["jobstatus"] == 1) | ((data["jobstatus"] == 0) & (data["new_weights"] > weight_cut)))]
+        else:
+            data = data[(data["cpu_eff"] > cpu_eff_cut)]
         ddf.append(data)
 
         start_date += datetime.timedelta(days=1)
@@ -22,9 +25,9 @@ def load_data(cols,start_date, end_date):
     ddf = dd.concat(ddf)
     return ddf
 
-def train_test_split(split,cols,seed,start_date,end_date):
+def train_test_split(split,cols,seed,start_date,end_date,weight_cut=0, cpu_eff_cut = 0.05):
 
-    data = load_data(cols,start_date,end_date)
+    data = load_data(cols,start_date,end_date,weight_cut,cpu_eff_cut)
     data_fail = data[data.jobstatus == 0]
     data_fin = data[data.jobstatus == 1]
     

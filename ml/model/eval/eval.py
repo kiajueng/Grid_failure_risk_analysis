@@ -61,6 +61,7 @@ def confusion(data: pd.DataFrame,
 def score_hist(data: pd.DataFrame,
                pred_col: str = "prediction",
                weight_cut: float = 0.3,
+               with_weights: bool = False,
 ) -> None:
     """Create the histogram for the output score of the model
 
@@ -76,6 +77,8 @@ def score_hist(data: pd.DataFrame,
         Float, setting the lower limit for the weights considered for this plot
         Number is used in the file name as extra information
     
+    with_weights: bool
+       Boolean, which decides if the training weights should be applied in the plotting of the histogram
     Returns
     ---
     None
@@ -87,12 +90,66 @@ def score_hist(data: pd.DataFrame,
     #Turn jobstatus column to string
     data_copy["jobstatus"] = data_copy["jobstatus"].astype("int16").map({0:"Failed",1:"Finished"})
     data_copy = data_copy[data_copy.cpu_eff > 0.05]
-    data_copy = data_copy[(data_copy.jobstatus=="Finished") | ((data_copy.new_weights > 10/3 * 0.5) & (data_copy.jobstatus == "Failed"))]
+    data_copy = data_copy[(data_copy.jobstatus=="Finished") | ((data_copy.new_weights > weight_cut) & (data_copy.jobstatus == "Failed"))]
+    f,ax = plt.subplots(figsize=(10,5))
+    if with_weights:
+        sns.histplot(data=data_copy,x=pred_col,hue="jobstatus",bins=20,weights="new_weights",alpha=0,element="step",stat="probability", ax=ax, common_norm = False)
+    else:
+        sns.histplot(data=data_copy,x=pred_col,hue="jobstatus",bins=20,alpha=0,element="step",stat="probability", ax=ax, common_norm = False)
+    sns.move_legend(ax, "upper left", bbox_to_anchor=(1.04, 1))
+
+    if with_weights:
+        plt.savefig(f"score_hist_wcut_with_weights_{round(weight_cut,2)}.pdf",bbox_inches="tight")
+    else:
+        plt.savefig(f"score_hist_wcut_{round(weight_cut,2)}.pdf",bbox_inches="tight")
+        
+    return
+
+def score_hist_type(data: pd.DataFrame,
+                    pred_col: str = "prediction",
+                    weight_cut: float = 0.3,
+                    j_type: str = "Failed",
+                    hue: str = None,
+) -> None:
+    """Create the histogram for the output score of the model
+
+    Parameters
+    ---
+    data: pd.DataFrame
+        Data, where the prediction for each data point is included as a extra column
+
+    pred_col: str
+        String, determening in which column the prediction of the model is saved
+
+    weight_cut : float
+        Float, setting the lower limit for the weights considered for this plot
+        Number is used in the file name as extra information
+    
+    j_type: str
+        String, indicating if only failed jobs or finished jobs are taken into account
+
+    hue: str
+        Column, on which the histrogram is split into the unique types of that column
+
+    Returns
+    ---
+    None
+    """
+
+    #Create deep copy of the data
+    data_copy = data.copy()
+
+    #Turn jobstatus column to string
+    data_copy["jobstatus"] = data_copy["jobstatus"].astype("int16").map({0:"Failed",1:"Finished"})
+    if j_type == "Failed":
+        data_copy = data_copy[((data_copy.cpu_eff > 0.05) & ((data_copy.new_weights > weight_cut) & (data_copy.jobstatus == "Failed")))]
+    elif j_type == "Finished":
+        data_copy = data_copy[((data_copy.cpu_eff > 0.05) & (data_copy.jobstatus=="Finished"))]
 
     f,ax = plt.subplots(figsize=(10,5))
-    sns.histplot(data=data_copy,x="prediction",hue="jobstatus",bins=20,alpha=0,element="step",stat="probability", ax=ax, common_norm = False)
+    sns.histplot(data=data_copy,x=pred_col,hue=hue,bins=20,element="stack",stat="probability", ax=ax, common_norm = True)
     sns.move_legend(ax, "upper left", bbox_to_anchor=(1.04, 1))
-    plt.savefig(f"score_hist_wcut_{round(weight_cut,2)}.pdf",bbox_inches="tight")
+    plt.savefig(f"score_hist_{j_type}_wcut_{round(weight_cut,2)}.pdf",bbox_inches="tight")
     
     return
 
@@ -144,6 +201,13 @@ def main(start_day: int,
          pred_col: str,
          weight_cut: float = 10/3*0.5,
          round_cut: float = 0.5,
+         j_type: str = "Failed",
+         hue : str = "jobstatus",
+         with_weights: bool = False,
+         loss_acc: bool = True,
+         confusion_matrix: bool = True,
+         score_histogram: bool = True,
+         score_histogram_type: bool = True,
 ) -> None:
 
     """Evaluate the performance of the model, by creating loss/accuracy plots, the confusion matrix
@@ -175,7 +239,7 @@ def main(start_day: int,
 
     pred_col: str
         string, determining the column name, which is used for the models output prediction 
-
+    
     Returns
     ---
     None
@@ -202,7 +266,7 @@ def main(start_day: int,
             start_date += datetime.timedelta(days=1)
             continue
 
-        data.append(pd.read_csv(f,usecols=["cpu_eff","jobstatus","prediction","new_weights"]))
+        data.append(pd.read_csv(f,usecols=["cpu_eff","jobstatus",pred_col,"new_weights"]))
         start_date += datetime.timedelta(days=1)
  
     data = pd.concat(data)
@@ -214,21 +278,28 @@ def main(start_day: int,
     checkpoint = torch.load(checkpoint_path)
     train_loss_acc = checkpoint["train_loss_acc"]
     test_loss_acc = checkpoint["test_loss_acc"]
-
+    
     #Create plots
     
     print("CREATING PLOTS...")
-    
-    confusion(data=data,pred_col=pred_col,cut=0.5)
-    confusion(data=data,pred_col=pred_col,cut=0.55)
-    confusion(data=data,pred_col=pred_col,cut=0.6)
-    confusion(data=data,pred_col=pred_col,cut=0.65)
-    confusion(data=data,pred_col=pred_col,cut=0.7)
-    confusion(data=data,pred_col=pred_col,cut=0.75)
 
-    score_hist(data=data,pred_col = pred_col, weight_cut = weight_cut)
-    loss_acc_plot(train_loss_acc["loss"], test_loss_acc["loss"], "loss", model_name = "weight_based")
-    loss_acc_plot(train_loss_acc["accuracy"], test_loss_acc["accuracy"], "accuracy",model_name = "weight_based")
+    if confusion_matrix: 
+        confusion(data=data,pred_col=pred_col,cut=0.5)
+        confusion(data=data,pred_col=pred_col,cut=0.55)
+        confusion(data=data,pred_col=pred_col,cut=0.6)
+        confusion(data=data,pred_col=pred_col,cut=0.65)
+        confusion(data=data,pred_col=pred_col,cut=0.7)
+        confusion(data=data,pred_col=pred_col,cut=0.75)
+
+    if score_histogram_type:
+        score_hist_type(data=data,pred_col = pred_col, weight_cut = weight_cut, j_type = j_type, hue = hue)
+        
+    if score_histogram:
+        score_hist(data=data,pred_col = pred_col, weight_cut = weight_cut, with_weights = with_weights)
+
+    if loss_acc:
+        loss_acc_plot(train_loss_acc["loss"], test_loss_acc["loss"], "loss", model_name = "weight_based")
+        loss_acc_plot(train_loss_acc["accuracy"], test_loss_acc["accuracy"], "accuracy",model_name = "weight_based")
 
 
 if __name__=="__main__":
@@ -241,15 +312,32 @@ if __name__=="__main__":
     end_month = 11
     end_year = 2023
 
-    checkpoint_path = "/home/kyang/master_grid/ml/model/model/model_checkpoint.tar"
-    pred_col = "prediction"
+    checkpoint_path = "/home/kyang/master_grid/ml/model/model_weights_no_cpu_eff/model_checkpoint.tar"
+    pred_col = "prediction_weights_no_cpu_eff"
+    j_type = None
+    hue = None
+    with_weights = True
+    weight_cut = 10/3 * 0.5
+
+    loss_acc = True
+    confusion_matrix = False
+    score_histogram = True
+    score_histogram_type = False
     
     main(start_day = start_day,
          start_month = start_month,
          start_year = start_year,
          end_day = end_day, 
          end_month = end_month, 
-         end_year = end_year, 
+         end_year = end_year,
+         weight_cut = weight_cut,
          checkpoint_path = checkpoint_path,
          pred_col = pred_col,
+         j_type = j_type,
+         hue = hue,
+         with_weights = with_weights,
+         loss_acc = loss_acc,
+         confusion_matrix = confusion_matrix,
+         score_histogram = score_histogram,
+         score_histogram_type = score_histogram_type,
     )

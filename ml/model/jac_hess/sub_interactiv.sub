@@ -1,0 +1,5 @@
+request_cpus   = 8
+request_memory = 10GB
+request_disk   = 5GB
+
+queue

@@ -1,7 +1,7 @@
 executable   = /home/kyang/master_grid/ml/model/run_training.sh
-output       = /home/kyang/master_grid/ml/model/model/out_$(ProcId).txt
-error        = /home/kyang/master_grid/ml/model/model/error_$(ProcId).txt
-log          = /home/kyang/master_grid/ml/model/model/run_training_$(ProcId).log
+output       = /home/kyang/master_grid/ml/model/model_weights_no_cpu_eff/out_$(ProcId).txt
+error        = /home/kyang/master_grid/ml/model/model_weights_no_cpu_eff/error_$(ProcId).txt
+log          = /home/kyang/master_grid/ml/model/model_weights_no_cpu_eff/run_training_$(ProcId).log
 max_retries  = 3
 requirements = Machine =!= LastRemoteHost
 

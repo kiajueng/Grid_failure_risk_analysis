@@ -24,6 +24,19 @@ if __name__=='__main__':
 
     
     while start_date <= end_date:
+
+        flag = False
+
+        with open("/home/kyang/master_grid/ml/model/inject/done.txt","r") as f_read:
+            for line in f_read:
+                if str(start_date) in line:
+                    flag = True
+
+        if flag: 
+            start_date += datetime.timedelta(days=1)
+            continue
+
+
         with open(f"/home/kyang/master_grid/ml/model/inject/condor_submit/inject_{count}.sh", "w") as f:
             for line in to_copy:
                 if "FILLED_DAY" in line:

@@ -1,6 +1,7 @@
 import sys
 
 sys.path.append("/home/kyang/master_grid/ml/model")
+import numpy as np
 import torch.nn as nn
 import pandas as pd 
 from model import MLP_binary
@@ -69,10 +70,16 @@ def main(end_date, start_date,features, feat,checkpoint_path,batch_size):
         for i in range(num_feat):
             hess[i,:] += torch.autograd.grad(jac_nosum[:,i],x,torch.ones(len(y)),retain_graph=True)[0].sum(axis=0)/len_dataset
 
-    with open("results.txt", "w+") as f:
-        f.write(f"{hess}\n\n")
-        f.write(f"{jac}")
+    with open("hessian.npy", "wb") as f:
+        np.save(f,hess.detach().numpy())
             
+    with open("jacobian.npy", "wb") as f:
+        np.save(f, jac.detach().numpy())
+        
+    with open("features.txt", "w+") as f:
+        for i in features:
+            f.write(i+"\n")
+
 if __name__=="__main__":
 
     features = ["io_intensity","wall_time","diskio","memory_leak","IObytesWriteRate", "IObytesReadRate","IObytesRead","IObytesWritten","outputfilebytes","actualcorecount","inputfilebytes","cpu_eff", "cpuconsumptiontime"]
@@ -80,7 +87,7 @@ if __name__=="__main__":
     feat.append("jobstatus")
 
     start_date = datetime.date(2023,11,1)
-    end_date = datetime.date(2023,11,10)
+    end_date = datetime.date(2023,11,30)
 
     checkpoint_path = "/home/kyang/master_grid/ml/model/model/model_checkpoint.tar"
 
