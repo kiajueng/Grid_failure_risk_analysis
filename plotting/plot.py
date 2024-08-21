@@ -37,6 +37,7 @@ example_conifg = {start_date: Start date to read the data from (Last modificatio
                   hue_mapping: Tuple, with the type as string and the mapping as dictionary, to map the column used for hue to other values and potentially other type (str,dict)
                   hue_ratio_class: String, defining which is the class of the hue, for which the ratio is computed (Default: None)
                   ratio_plot: Boolean, deciding if along the histogram a ratio plot is also created (Default: False)
+                  weights: string or array, defining either the key to use for the weights or give an array for each datapoint (Default: None)
                   }
 """
 
@@ -101,6 +102,7 @@ class hist_plot():
                        "underflow": -np.inf,
                        "hue_ratio_class":None,
                        "ratio_plot":False,
+                       "weights": None,
         }
 
         #Options set in config file
@@ -314,7 +316,14 @@ class hist_plot():
         """
         # Filter data with condition
         f_data = data.copy()
-        f_data["ratio_weights"] = 1.0
+
+        if isinstance(cfg["weights"],str):
+            f_data["ratio_weights"] = f_data[cfg["weights"]]
+        elif cfg["weights"] is None:
+            f_data["ratio_weights"] = 1.0
+        else:
+            f_data["ratio_weights"] = cfg["weights"]
+            
         f_data = f_data.loc[eval(cfg["condition"])].reset_index(drop=True)
         f_data[cfg["x"]] = f_data[cfg["x"]].clip(cfg["underflow"],cfg["overflow"])
         
@@ -325,7 +334,7 @@ class hist_plot():
 
         histo_data = f_data.loc[f_data[cfg["hue"]] == cfg["hue_ratio_class"]]
         
-        bins,bin_edges = np.histogram(histo_data[cfg["x"]].values, bins = cfg["bins"], density=False)
+        bins,bin_edges = np.histogram(histo_data[cfg["x"]].values, bins = cfg["bins"], density=False, weights=f_data["ratio_weights"].values)
 
         for i in range(len(bin_edges) - 1):
             
@@ -392,6 +401,14 @@ class hist_plot():
             f_data[cfg["hue"]] = f_data[cfg["hue"]].map(cfg["hue_mapping"][1])
             f_data[cfg["hue"]] = f_data[cfg["hue"]].astype(cfg["hue_mapping"][0])
 
+        #Define the weights for the histograms
+        if isinstance(cfg["weights"],str):
+            weights = f_data[cfg["weights"]]
+        elif cfg["weights"] is None:
+            weights = None
+        else:
+            weights = cfg["weights"]
+            
         # Now use the filtered data to create the histogram
         f, ax = plt.subplots(figsize=cfg["fig_size"])
         sns.despine(f)  # Remove top and right spine of histogram
@@ -403,6 +420,7 @@ class hist_plot():
                               bins=cfg["bins"],
                               alpha=0,
                               ax=ax,
+                              weights=weights,
                               stat=cfg["stat"],
                               common_norm=False,
                               palette=cfg["class_color"],
@@ -416,6 +434,7 @@ class hist_plot():
                               bins=cfg["bins"],
                               stat=cfg["stat"],
                               ax=ax,
+                              weights=weights,
                               palette=cfg["class_color"],
                               hue_order=cfg["hue_order"],
             )
@@ -427,6 +446,7 @@ class hist_plot():
                               cbar=True,
                               stat=cfg["stat"],
                               ax=ax,
+                              weights=weights,
             )
         else:
             assert False, "No valid plotting option"
