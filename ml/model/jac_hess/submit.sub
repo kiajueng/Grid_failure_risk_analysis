@@ -1,0 +1,12 @@
+executable   = /home/kyang/master_grid/ml/model/jac_hess/calc_jac_hess.sh
+output       = /home/kyang/master_grid/ml/model/jac_hess/out_$(ProcId).txt
+error        = /home/kyang/master_grid/ml/model/jac_hess/error_$(ProcId).txt
+log          = /home/kyang/master_grid/ml/model/jac_hess/plot_$(ProcId).log
+max_retries  = 5
+requirements = Machine =!= LastRemoteHost
+
+should_transfer_files=YES
+request_cpus   = 8
+request_memory = 10GB
+request_disk   = 5GB
+queue 1

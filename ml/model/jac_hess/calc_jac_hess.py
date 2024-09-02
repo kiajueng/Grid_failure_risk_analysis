@@ -24,7 +24,7 @@ def main(end_date, start_date,features, feat,checkpoint_path,batch_size):
         
     scaled_data = pd.concat(scaled_data)
 
-    scaled_data.loc[:,features] = minmax_scaler(scaled_data.loc[:,features], "/home/kyang/master_grid/ml/model/model",True)
+    scaled_data.loc[:,features] = minmax_scaler(scaled_data.loc[:,features], "/home/kyang/master_grid/ml/model/model_weights",True)
     
     dataset = TabularDataset(scaled_data,features=features,glob_weight=1)
     dataloader = DataLoader(dataset,batch_size=batch_size, shuffle=False)
@@ -34,8 +34,8 @@ def main(end_date, start_date,features, feat,checkpoint_path,batch_size):
 
     print("INITIALIZE MODEL")
     input_size = len(features)
-    hidden_sizes = [32,64,32]
-    hidden_act_fns = [nn.ReLU(),nn.ReLU(),nn.ReLU()]
+    hidden_sizes = [32,64,64,32]
+    hidden_act_fns = [nn.ReLU(),nn.ReLU(),nn.ReLU(),nn.ReLU()]
     output_act_fn = nn.Sigmoid()
     output_size = 1
 
@@ -70,26 +70,26 @@ def main(end_date, start_date,features, feat,checkpoint_path,batch_size):
         for i in range(num_feat):
             hess[i,:] += torch.autograd.grad(jac_nosum[:,i],x,torch.ones(len(y)),retain_graph=True)[0].sum(axis=0)/len_dataset
 
-    with open("hessian.npy", "wb") as f:
+    with open("/home/kyang/master_grid/ml/model/jac_hess/hessian.npy", "wb") as f:
         np.save(f,hess.detach().numpy())
             
-    with open("jacobian.npy", "wb") as f:
+    with open("/home/kyang/master_grid/ml/model/jac_hess/jacobian.npy", "wb") as f:
         np.save(f, jac.detach().numpy())
         
-    with open("features.txt", "w+") as f:
+    with open("/home/kyang/master_grid/ml/model/jac_hess/features.txt", "w+") as f:
         for i in features:
             f.write(i+"\n")
 
 if __name__=="__main__":
 
-    features = ["io_intensity","wall_time","diskio","memory_leak","IObytesWriteRate", "IObytesReadRate","IObytesRead","IObytesWritten","outputfilebytes","actualcorecount","inputfilebytes","cpu_eff", "cpuconsumptiontime"]
+    features = ["io_intensity","wall_time","diskio","memory_leak","IObytesWriteRate", "IObytesReadRate","IObytesRead","IObytesWritten","actualcorecount","inputfilebytes","cpu_eff"]
     feat = copy.deepcopy(features)
     feat.append("jobstatus")
 
     start_date = datetime.date(2023,11,1)
     end_date = datetime.date(2023,11,30)
 
-    checkpoint_path = "/home/kyang/master_grid/ml/model/model/model_checkpoint.tar"
+    checkpoint_path = "/home/kyang/master_grid/ml/model/model_weights/model_checkpoint.tar"
 
     main(start_date=start_date,
          end_date=end_date,

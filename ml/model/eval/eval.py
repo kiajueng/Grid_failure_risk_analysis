@@ -138,7 +138,7 @@ def score_hist_type(data: pd.DataFrame,
 
     #Create deep copy of the data
     data_copy = data.copy()
-
+    print(data_copy)
     #Turn jobstatus column to string
     data_copy["jobstatus"] = data_copy["jobstatus"].astype("int16").map({0:"Failed",1:"Finished"})
     if j_type == "Failed":
@@ -147,7 +147,7 @@ def score_hist_type(data: pd.DataFrame,
         data_copy = data_copy[((data_copy.cpu_eff > 0.05) & (data_copy.jobstatus=="Finished"))]
 
     f,ax = plt.subplots(figsize=(10,5))
-    sns.histplot(data=data_copy,x=pred_col,hue=hue,bins=20,element="stack",stat="probability", ax=ax, common_norm = True)
+    sns.histplot(data=data_copy,x=pred_col,hue=hue,bins=20,multiple="stack",stat="probability", ax=ax, common_norm = True)
     sns.move_legend(ax, "upper left", bbox_to_anchor=(1.04, 1))
     plt.savefig(f"score_hist_{j_type}_wcut_{round(weight_cut,2)}.pdf",bbox_inches="tight")
     
@@ -266,7 +266,7 @@ def main(start_day: int,
             start_date += datetime.timedelta(days=1)
             continue
 
-        data.append(pd.read_csv(f,usecols=["cpu_eff","jobstatus",pred_col,"new_weights"]))
+        data.append(pd.read_csv(f,usecols=["cpu_eff","jobstatus",pred_col,"new_weights",hue]))
         start_date += datetime.timedelta(days=1)
  
     data = pd.concat(data)
@@ -312,17 +312,17 @@ if __name__=="__main__":
     end_month = 11
     end_year = 2023
 
-    checkpoint_path = "/home/kyang/master_grid/ml/model/model_weights_no_cpu_eff/model_checkpoint.tar"
-    pred_col = "prediction_weights_no_cpu_eff"
-    j_type = None
-    hue = None
-    with_weights = True
+    checkpoint_path = "/home/kyang/master_grid/ml/model/model_weights/model_checkpoint.tar"
+    pred_col = "prediction_weights"
+    j_type = "Finished"
+    hue = "processingtype"
+    with_weights = False
     weight_cut = 10/3 * 0.5
 
-    loss_acc = True
+    loss_acc = False
     confusion_matrix = False
-    score_histogram = True
-    score_histogram_type = False
+    score_histogram = False
+    score_histogram_type = True
     
     main(start_day = start_day,
          start_month = start_month,
