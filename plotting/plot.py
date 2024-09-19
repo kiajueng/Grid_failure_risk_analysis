@@ -275,7 +275,6 @@ class hist_plot():
             if len(data) == 0:
                 raise FileNotFoundError(
                     "No files found to load into pandas dataframe!")
-
             
             concat_data = pd.concat(data) if len(data) > 1 else data[0]
             
@@ -305,83 +304,6 @@ class hist_plot():
             concat_data[var] = pd.to_datetime(concat_data[var], errors="coerce")
 
         return concat_data
-
-    def ratio_plot(self, cfg, data):
-        """
-        Create and save the ratio histogram specified by the config for a specific hue
-
-        :param cfg: Dictionary with the config for the plot
-        :param data: Data, used for the plotting
-        :return:
-        """
-        # Filter data with condition
-        f_data = data.copy()
-
-        if isinstance(cfg["weights"],str):
-            f_data["ratio_weights"] = f_data[cfg["weights"]]
-        elif cfg["weights"] is None:
-            f_data["ratio_weights"] = 1.0
-        else:
-            f_data["ratio_weights"] = cfg["weights"]
-            
-        f_data = f_data.loc[eval(cfg["condition"])].reset_index(drop=True)
-        f_data[cfg["x"]] = f_data[cfg["x"]].clip(cfg["underflow"],cfg["overflow"])
-        
-        #Map classes of hue to other value with potentially other type
-        if cfg["hue_mapping"]:
-            f_data[cfg["hue"]] = f_data[cfg["hue"]].map(cfg["hue_mapping"][1])
-            f_data[cfg["hue"]] = f_data[cfg["hue"]].astype(cfg["hue_mapping"][0])
-
-        histo_data = f_data.loc[f_data[cfg["hue"]] == cfg["hue_ratio_class"]]
-        
-        bins,bin_edges = np.histogram(histo_data[cfg["x"]].values, bins = cfg["bins"], density=False, weights=f_data["ratio_weights"].values)
-
-        for i in range(len(bin_edges) - 1):
-            
-            bin_left = bin_edges[i]
-            bin_right = bin_edges[i + 1]
-
-            if i < len(bin_edges)-2:
-                f_data.loc[((f_data[cfg["x"]] >= bin_left) & (f_data[cfg["x"]] < bin_right)),["ratio_weights"]] /= bins[i]
-
-            else:
-                f_data.loc[((f_data[cfg["x"]] >= bin_left) & (f_data[cfg["x"]] <= bin_right)),["ratio_weights"]] /= bins[i]
-
-        f, ax = plt.subplots(figsize=cfg["fig_size"])
-        ax = sns.histplot(data=f_data,
-                          x=cfg["x"],
-                          element="step",
-                          hue=cfg["hue"],
-                          bins=cfg["bins"],
-                          alpha=0,
-                          ax=ax,
-                          weights="ratio_weights",
-                          palette=cfg["class_color"],
-                          hue_order=cfg["hue_order"],
-        )
-        # Set xticks for the histogram
-        if cfg["xticks"]:
-            ax.set_xticks(cfg["xticks"])
-
-        if cfg["y_log_scale"]:
-            ax.set_yscale("log")
-
-        if cfg["x_log_scale"]:
-            ax.set_xscale("log")
-
-        # Set x and y label for histogram
-        ax.set(xlabel=cfg["xlabel"], ylabel=cfg["ylabel"])
-        ax.set_title(cfg["title"])
-
-        plt.xticks(rotation=cfg["x_rotate"])
-
-        ax.get_legend().set_visible(False)
-        # Save histogram as .pdf file
-        plt.savefig(cfg["hist_name"] + "ratio_plot" + ".pdf",bbox_inches='tight')
-        
-        #Close figure again
-        plt.close(f)
-
     
     def plot(self, cfg, data):
         """
@@ -393,14 +315,25 @@ class hist_plot():
         """
         # Filter data with condition
         f_data = data.copy()
+
+        if cfg["ratio_plot"]:
+            #Initialize weights for the ration plots
+            if isinstance(cfg["weights"],str):
+                f_data["ratio_weights"] = f_data[cfg["weights"]]
+            elif cfg["weights"] is None:
+                f_data["ratio_weights"] = 1.0
+            else:
+                f_data["ratio_weights"] = cfg["weights"]
+
+        
         f_data = f_data.loc[eval(cfg["condition"])].reset_index(drop=True)
         f_data[cfg["x"]] = f_data[cfg["x"]].clip(cfg["underflow"],cfg["overflow"])
-
+        
         #Map classes of hue to other value with potentially other type
         if cfg["hue_mapping"]:
             f_data[cfg["hue"]] = f_data[cfg["hue"]].map(cfg["hue_mapping"][1])
             f_data[cfg["hue"]] = f_data[cfg["hue"]].astype(cfg["hue_mapping"][0])
-
+        
         #Define the weights for the histograms
         if isinstance(cfg["weights"],str):
             weights = f_data[cfg["weights"]]
@@ -408,9 +341,31 @@ class hist_plot():
             weights = None
         else:
             weights = cfg["weights"]
+
+        if cfg["ratio_plot"]:
+            #Calculate ratio values for each bin
+            histo_data = f_data.loc[f_data[cfg["hue"]] == cfg["hue_ratio_class"]]
+        
+            bins,bin_edges = np.histogram(histo_data[cfg["x"]].values, range = (f_data[cfg["x"]].min(),f_data[cfg["x"]].max()),bins = cfg["bins"], density=False, weights=histo_data["ratio_weights"].values)
+
+            for i in range(len(bin_edges) - 1):
             
+                bin_left = bin_edges[i]
+                bin_right = bin_edges[i + 1]
+
+                if i < len(bin_edges)-2:
+                    f_data.loc[((f_data[cfg["x"]] >= bin_left) & (f_data[cfg["x"]] < bin_right)),["ratio_weights"]] /= bins[i]
+
+                else:
+                    f_data.loc[((f_data[cfg["x"]] >= bin_left) & (f_data[cfg["x"]] <= bin_right)),["ratio_weights"]] /= bins[i]
+
         # Now use the filtered data to create the histogram
-        f, ax = plt.subplots(figsize=cfg["fig_size"])
+
+        if cfg["ratio_plot"]:
+            f, (ax,ax_ratio) = plt.subplots(2,1,figsize=cfg["fig_size"],gridspec_kw={'height_ratios': [3,1]})
+        else:
+            f, ax = plt.subplots(figsize=cfg["fig_size"])
+        
         sns.despine(f)  # Remove top and right spine of histogram
         if (cfg["type"] == "step"):
             ax = sns.histplot(data=f_data,
@@ -447,21 +402,45 @@ class hist_plot():
                               stat=cfg["stat"],
                               ax=ax,
                               weights=weights,
+                              log_scale=(cfg["x_log_scale"],cfg["y_log_scale"]),
             )
         else:
             assert False, "No valid plotting option"
+
+        if cfg["ratio_plot"]:
+            ax_ratio = sns.histplot(data=f_data,
+                                    x=cfg["x"],
+                                    element="step",
+                                    hue=cfg["hue"],
+                                    bins=cfg["bins"],
+                                    alpha=0,
+                                    ax=ax_ratio,
+                                    weights="ratio_weights",
+                                    palette=cfg["class_color"],
+                                    hue_order=cfg["hue_order"],
+                                    legend=False,
+            )
+        
         # Set xticks for the histogram
-        if cfg["xticks"]:
+        if (cfg["xticks"] and cfg["ratio_plot"]):
+            ax_ratio.set_xticks(cfg["xticks"])
+            ax.set_xticks([])
+            ax_ratio.set(xlabel=cfg["xlabel"])
+            ax_ratio.set(ylabel = f"Class / {cfg['hue_ratio_class']}")
+            ax.set(xlabel=None)
+            ax_ratio.set_yscale("log")
+        elif cfg["ratio_plot"]:
+            ax.set_xticks([])
+            ax_ratio.set(xlabel=cfg["xlabel"])
+            ax_ratio.set(ylabel = f"Class / {cfg['hue_ratio_class']}")
+            ax.set(xlabel=None)
+            ax_ratio.set_yscale("log")
+        elif cfg["xticks"]:
             ax.set_xticks(cfg["xticks"])
-
-        if cfg["y_log_scale"]:
-            ax.set_yscale("log")
-
-        if cfg["x_log_scale"]:
-            ax.set_xscale("log")
+            ax.set(xlabel=cfg["xlabel"])
 
         # Set x and y label for histogram
-        ax.set(xlabel=cfg["xlabel"], ylabel=cfg["ylabel"])
+        ax.set(ylabel=cfg["ylabel"])
         ax.set_title(cfg["title"])
 
         plt.xticks(rotation=cfg["x_rotate"])
@@ -483,8 +462,6 @@ class hist_plot():
                 print(f'LOAD DATA OF FILES: {cfg["files"]}')
                 data = self.load_data(variables=cfg["variables"],dt_var=cfg["datetime_var"],cfg=cfg)
                 self.plot(cfg,data)
-                if cfg["ratio_plot"]:
-                    self.ratio_plot(cfg,data)
 
         #Sort all configs by path, if cfg["files"] has files specified, they are thrown out
         cfgs_dict_path = self.group_cfg_path(self.cfgs)
@@ -519,5 +496,3 @@ class hist_plot():
                 # Create plots for each config
                 for cfg in cfgs_dict_date[path][date_range]:
                     self.plot(cfg, data)
-                    if cfg["ratio_plot"]:
-                        self.ratio_plot(cfg,data)

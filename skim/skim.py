@@ -28,4 +28,4 @@ if len(agg_df) == 0:
 skimmed_day_data = pd.concat(agg_df)
 
 #Safe skimmed data files
-skimmed_day_data.to_csv(f'/share/scratch1/es-atlas/atlas_jobs_enr_skimmed/atlas_jobs_enr-{args.year}_{args.month}_{args.day}.csv', index=False)
+skimmed_day_data.to_csv(f'/share/scratch1/kiajueng_yang/test/atlas_jobs_enr-{args.year}_{args.month}_{args.day}.csv', index=False)

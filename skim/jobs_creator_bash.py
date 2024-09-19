@@ -51,7 +51,7 @@ s_year = 2023
 s_date = datetime.date(s_year,s_month,s_day)
 
 #Initialize end date
-e_day = 31 
+e_day = 2 
 e_month = 12 
 e_year = 2023
 e_date = datetime.date(e_year,e_month,e_day)

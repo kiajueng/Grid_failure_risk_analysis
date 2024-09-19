@@ -27,8 +27,8 @@ def main(date,features,checkpoint_path,scale_path,pred_col="prediction_mask"):
     
     print("INITIALIZE MODEL")
     input_size = len(features)
-    hidden_sizes = [32,64,64,32]
-    hidden_act_fns = [nn.ReLU(),nn.ReLU(),nn.ReLU(),nn.ReLU()]
+    hidden_sizes = [32,64,32]
+    hidden_act_fns = [nn.ReLU(),nn.ReLU(),nn.ReLU()]
     output_act_fn = nn.Sigmoid()
     output_size = 1
 
@@ -65,17 +65,17 @@ if __name__=="__main__":
     args = parser.parse_args()
 
     
-    features = ["io_intensity","wall_time","diskio","memory_leak","IObytesWriteRate", "IObytesReadRate","IObytesRead","IObytesWritten","actualcorecount","inputfilebytes","cpu_eff"]
+    features = ["io_intensity","wall_time","diskio","memory_leak","IObytesWriteRate", "IObytesReadRate","IObytesRead","IObytesWritten","outputfilebytes","actualcorecount","inputfilebytes","cpu_eff", "cpuconsumptiontime"]#["io_intensity","wall_time","diskio","memory_leak","IObytesWriteRate", "IObytesReadRate","IObytesRead","IObytesWritten","actualcorecount","inputfilebytes","cpu_eff"]
 
     date = datetime.date(args.year,args.month,args.day)
 
-    checkpoint_path = "/home/kyang/master_grid/ml/model/model_weights_no_cpu_eff/model_checkpoint.tar"
+    checkpoint_path = "/home/kyang/master_grid/ml/model/model/model_checkpoint.tar"
 
     main(date=date,
          features=features,
          checkpoint_path=checkpoint_path,
-         scale_path = "/home/kyang/master_grid/ml/model/model_weights_no_cpu_eff",
-         pred_col = "prediction_weights_no_cpu_eff",
+         scale_path = "/home/kyang/master_grid/ml/model/model",
+         pred_col = "prediction",
     )
 
     with open("/home/kyang/master_grid/ml/model/inject/done.txt", "a+") as f:

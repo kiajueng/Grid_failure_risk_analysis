@@ -2,6 +2,7 @@ executable   = /home/kyang/master_grid/ml/model/jac_hess/calc_jac_hess.sh
 output       = /home/kyang/master_grid/ml/model/jac_hess/out_$(ProcId).txt
 error        = /home/kyang/master_grid/ml/model/jac_hess/error_$(ProcId).txt
 log          = /home/kyang/master_grid/ml/model/jac_hess/plot_$(ProcId).log
+stream_output = True
 max_retries  = 5
 requirements = Machine =!= LastRemoteHost
 

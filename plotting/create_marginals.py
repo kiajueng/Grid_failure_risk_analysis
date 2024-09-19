@@ -339,7 +339,32 @@ cfg_16 = {"start_date" :"2023_08_01",
          "hue_order":["finished","failed"],
 }
 
+cfg_2D = {"start_date" :"2023_10_01",
+         "end_date" : "2023_10_31",
+         "variables" : ["modificationtime","jobstatus","cpuconsumptiontime","wall_time","cpu_eff"],
+         "title" : "",
+         "hist_name" : "2D_low_cpueff",
+         "bins" :100,
+         "ylabel" : "Wall time",
+         "xlabel": "CPU Consumption Time",
+         "xticks" : [],
+         "normalize": True,
+         #"hue" : "jobstatus",
+         "fig_size" : (10,5),
+         "x" : "cpuconsumptiontime",
+         "y" : "wall_time",
+         "x_rotate" : 0,
+         "datetime_var" : ["modificationtime"],
+         "condition" :"(data['cpu_eff']< 0.05)",
+         "type":"2D",
+         "y_log_scale" : False,
+         "x_log_scale" : False,
+         #"class_color": {"failed":"red","finished":"green"},
+         #"hue_order":["finished","failed"],
+}
+
+
 #cfgs = [cfg_4,cfg_5,cfg_6,cfg_7,cfg_8,cfg_9,cfg_10,cfg_11,cfg_12,cfg_13,cfg_14,cfg_15,cfg_16,]
-cfgs=[cfg_18]
+cfgs=[cfg_2D]
 histo_plotting = plot.hist_plot(cfgs)
 histo_plotting.create_plots()
