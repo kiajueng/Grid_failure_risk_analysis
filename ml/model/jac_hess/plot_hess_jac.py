@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 #features = ["io_intensity","wall_time","diskio","memory_leak","IObytesWriteRate", "IObytesReadRate","IObytesRead","IObytesWritten","actualcorecount","inputfilebytes","cpu_eff"]
-name = "prediction_mask_abs"
+name = "prediction_weights_abs"
 features = []
 
 with open(f"features_{name}.txt","r+") as f:
@@ -19,8 +19,11 @@ jac = pd.DataFrame(data=jac, columns = features)
 
 # Define the plot
 fig, ax = plt.subplots(figsize=(25,10))
-
+plt.xticks(fontsize = 13) 
+plt.yticks(fontsize = 13) 
+sns.set(font_scale=1.3)
 sns.heatmap(hess, annot=True, cmap="viridis", ax=ax, fmt=".1f")
+
 plt.savefig(f"Hessian_{name}.pdf", bbox_inches="tight")
 
 plt.close(fig)

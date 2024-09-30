@@ -422,6 +422,8 @@ class hist_plot():
             )
         
         # Set xticks for the histogram
+        ax.set(xlabel=cfg["xlabel"])
+
         if (cfg["xticks"] and cfg["ratio_plot"]):
             ax_ratio.set_xticks(cfg["xticks"])
             ax.set_xticks([])
@@ -440,6 +442,7 @@ class hist_plot():
             ax.set(xlabel=cfg["xlabel"])
 
         # Set x and y label for histogram
+
         ax.set(ylabel=cfg["ylabel"])
         ax.set_title(cfg["title"])
 

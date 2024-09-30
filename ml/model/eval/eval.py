@@ -37,7 +37,10 @@ def roc_curve(data: pd.DataFrame,
     data_copy = data_copy[(data_copy.jobstatus==1) | ((data_copy.new_weights > weight_cut) & (data_copy.jobstatus == 0))]
 
     fpr, tpr, thresholds = metrics.roc_curve(data_copy["jobstatus"], data_copy[pred_col])
-    
+    auc = metrics.auc(fpr,tpr)
+    with open(f"AUC_{pred_col}.txt", "w+") as f:
+        f.write(f"{auc}")
+        
     fig = plt.figure()
     plt.plot(fpr, tpr,color="blue")
     plt.title("AUC Value: metrics.auc(fpr,tpr)")
@@ -137,7 +140,7 @@ def score_hist(data: pd.DataFrame,
         sns.histplot(data=data_copy,x=pred_col,hue="jobstatus",bins=20,alpha=0,element="step",stat="probability", ax=ax, common_norm = False)
     sns.move_legend(ax, "upper left", bbox_to_anchor=(1.04, 1))
 
-    ax.set(xlabel = "prediction")
+    ax.set(xlabel = "Prediction")
 
     if with_weights:
         plt.savefig(f"score_hist_wcut_with_weights_{round(weight_cut,2)}_{pred_col}.pdf",bbox_inches="tight")
@@ -179,7 +182,6 @@ def score_hist_type(data: pd.DataFrame,
 
     #Create deep copy of the data
     data_copy = data.copy()
-    print(data_copy)
     #Turn jobstatus column to string
     data_copy["jobstatus"] = data_copy["jobstatus"].astype("int16").map({0:"Failed",1:"Finished"})
     if j_type == "Failed":
@@ -188,8 +190,10 @@ def score_hist_type(data: pd.DataFrame,
         data_copy = data_copy[((data_copy.cpu_eff > 0.05) & (data_copy.jobstatus=="Finished"))]
 
     f,ax = plt.subplots(figsize=(10,5))
+
     sns.histplot(data=data_copy,x=pred_col,hue=hue,bins=20,multiple="stack",stat="probability", ax=ax, common_norm = True)
     sns.move_legend(ax, "upper left", bbox_to_anchor=(1.04, 1))
+    ax.set(xlabel = "prediction")
     plt.savefig(f"score_hist_{j_type}_wcut_{round(weight_cut,2)}_{pred_col}.pdf",bbox_inches="tight")
     
     return
@@ -358,17 +362,17 @@ if __name__=="__main__":
     end_year = 2023
 
     checkpoint_path = "/home/kyang/master_grid/ml/model/model_weights/model_checkpoint.tar"
-    pred_col = "prediction_weights"
-    j_type = "Finished"
+    pred_col = "prediction"
+    j_type = "Failed"
     hue = "processingtype"
-    with_weights = True
-    weight_cut = -100#10/3 * 0.5
+    with_weights = False
+    weight_cut = 10/3 * 0.5
 
     loss_acc = False
     confusion_matrix = False
-    score_histogram = True
+    score_histogram = False
     score_histogram_type = False
-    roc = False
+    roc = True
     
     main(start_day = start_day,
          start_month = start_month,

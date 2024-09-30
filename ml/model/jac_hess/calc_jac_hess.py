@@ -84,10 +84,10 @@ if __name__=="__main__":
 
 #    features = ["io_intensity","wall_time","diskio","memory_leak","IObytesWriteRate", "IObytesReadRate","IObytesRead","IObytesWritten","actualcorecount","inputfilebytes","cpu_eff"]
     features = ["io_intensity","wall_time","diskio","memory_leak","IObytesWriteRate", "IObytesReadRate","IObytesRead","IObytesWritten","outputfilebytes","actualcorecount","inputfilebytes","cpu_eff", "cpuconsumptiontime"]
-
+    
     feat = copy.deepcopy(features)
     feat.append("jobstatus")
-    name = "prediction_abs"
+    name = "Test"
     start_date = datetime.date(2023,11,1)
     end_date = datetime.date(2023,11,30)
 

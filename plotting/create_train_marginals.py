@@ -12,11 +12,12 @@ cfg_cfg = {"io_intensity": {"xlabel":"IO Intensity in [B/s]", "overflow":1e7, "u
            "actualcorecount": {"xlabel":"Core Count", "overflow": 100, "underflow":0},
            "inputfilebytes": {"xlabel":"Input File Bytes in [B]", "overflow": 1e11, "underflow":0},
            "cpu_eff": {"xlabel":"CPU Efficiency", "overflow": 1.25, "underflow":0},
+
 }
 
-cfg = { "start_date": "2023_11_01",
-        "end_date": "2023_11_30",
-        "variables": ["modificationtime","jobstatus","prediction_weights"],
+cfg = { "start_date": "2023_08_01",
+        "end_date": "2023_10_31",
+        "variables": ["modificationtime","jobstatus"],
         "path": "/share/scratch1/kiajueng_yang/data_pred",
         "bins": 50,
         "ylabel": "Probability",
